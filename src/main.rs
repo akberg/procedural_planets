@@ -2,11 +2,18 @@ use glium;
 use glium::glutin;
 use glium::{Surface};
 
+use std::sync::{Arc, Mutex};
+
+use glm::noise2;
+
+
 #[derive(Copy, Clone)]
 struct Vertex {
     position: [f32; 2],
 }
 glium::implement_vertex!(Vertex, position);
+
+enum GameState { Loading, Ready }
 
 fn main() {
     // Setup
@@ -15,24 +22,25 @@ fn main() {
     let cb = glutin::ContextBuilder::new();
     let display = glium::Display::new(wb,cb, &event_loop).unwrap();
 
-    // Simple shader for now
-    let vertex_shader_src = r#"
+    // Load shaders
+    let vertex_shader_src = std::fs::read_to_string("resources/shaders/planet.vert").unwrap();
+    let fragment_shader_src = std::fs::read_to_string("resources/shaders/planet.frag").unwrap();
+    // If tessellation shaders are used:
+    let program = glium::program::SourceCode {
+        vertex_shader: &vertex_shader_src,
+        fragment_shader: &fragment_shader_src,
+        tessellation_control_shader: None,
+        tessellation_evaluation_shader: None,
+        geometry_shader: None,
+    };
+    let program = glium::Program::new(&display, program).unwrap();
+    // Simple:
+    // let program = glium::Program::from_source(&display, 
+    //     &vertex_shader_src, 
+    //     &fragment_shader_src, 
+    //     None
+    // ).unwrap();
 
-        in vec2 position;
-
-        void main() {
-            gl_Position = vec4(position, 0.0, 1.0);
-        }
-    "#;
-    let fragment_shader_src = r#"
-
-        out vec4 color;
-
-        void main() {
-            color = vec4(1.0, 0.0, 0.0, 1.0);
-        }
-    "#;
-    let program = glium::Program::from_source(&display, vertex_shader_src, fragment_shader_src, None).unwrap();
 
     // Initialize game
     let shape = vec![
@@ -42,19 +50,6 @@ fn main() {
     ];
     let vertex_buffer = glium::VertexBuffer::new(&display, &shape).unwrap();
     
-
-    // Render thread
-    // std::thread::spawn(move || {
-    //     // Clear screen
-    //     let mut target = display.draw();
-    //     target.clear_color(0.0, 0.0, 1.0, 1.0);
-    //     target.finish().unwrap();
-    
-    //     // Draw
-    
-        
-
-    // });
 
     // Event loop
     event_loop.run(move |ev, _, control_flow| {
@@ -80,5 +75,22 @@ fn main() {
             },
             _ => (),
         }
+
+        // Clear screen
+        let mut target = display.draw();
+        
+        target.clear_color(0.0, 0.0, 1.0, 1.0);
+        
+        // Draw
+        target.draw(
+            &vertex_buffer, 
+            &glium::index::NoIndices(glium::index::PrimitiveType::TrianglesList), 
+            &program, 
+            &glium::uniforms::EmptyUniforms, 
+            &Default::default()
+        ).unwrap();
+
+        // Finish drawing
+        target.finish().unwrap();
     });
 }
