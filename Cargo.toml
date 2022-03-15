@@ -7,5 +7,6 @@ edition = "2018"
 
 [dependencies]
 glium = "0.31.0"
-glm = "0.2.3"
+nalgebra-glm = "0.16.0"
 obj-rs = { version = "0.7.0", features = ["glium"] }
+image = "0.24.1"
