@@ -27,9 +27,21 @@ Keywords:
 * Lighting: A sun, could try to add an atmosphere
 * Particles: stones, trees
 * Controller: A spaceship mesh
+* Skybox
 
 https://www.researchgate.net/publication/226410924_Spherical_Parameterization_of_Marching_Cubes_IsoSurfaces_Based_upon_Nearest_Neighbor_Coordinates
+
 https://graphics.stanford.edu/~mdfisher/MarchingCubes.html
+
+https://www.researchgate.net/publication/275971902_A_standardized_procedure_for_the_derivation_of_smooth_and_partially_overset_grids_on_the_sphere_associated_with_polyhedra_that_admit_regular_griddings_of_their_surfaces_Part_I_Mathematical_principles_
+
+Multi-dimensional https://www.sciencedirect.com/science/article/pii/S002199911300538X
+
+
+Icosphere: http://blog.andreaskahler.com/2009/06/creating-icosphere-mesh-in-code.html
+
+Cubesphere: https://catlikecoding.com/unity/tutorials/cube-sphere/
+
 
 ## Timeline
 
