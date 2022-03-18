@@ -1,8 +1,13 @@
 #version 460 core
 
-in vec2 position;
+in vec3 position;
+in vec3 normal;
+in vec2 v_texture;
 
-out vec2 v_position;
+out vec3 v_position;
+out vec3 v_normal;
+out vec3 v_texture;
+
 
 void main()
 {

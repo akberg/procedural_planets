@@ -1,247 +1,541 @@
-use glium;
-use glium::glutin;
-use glium::{Surface};
+extern crate nalgebra_glm as glm;
+use std::{ mem, ptr, os::raw::c_void };
+use std::thread;
+use std::sync::{Mutex, Arc, RwLock};
 
-use std::sync::{Arc, Mutex};
-
-use nalgebra_glm as glm;
-
+mod shader;
+mod util;
 mod mesh;
+mod scene_graph;
 
-#[derive(Copy, Clone)]
-struct Vertex {
-    position: [f32; 2],
+use scene_graph::SceneNode;
+use util::CameraPosition::*;
+
+use glutin::event::{
+    Event,
+    WindowEvent,
+    DeviceEvent,
+    KeyboardInput,
+    ElementState::{Pressed, Released},
+    VirtualKeyCode::{self, *}
+};
+
+use glutin::event_loop::ControlFlow;
+
+const SCREEN_W: u32 = 800;
+const SCREEN_H: u32 = 600;
+
+// Helper functions to make interacting with OpenGL a little bit 
+// prettier. You *WILL* need these! The names should be pretty self 
+// explanatory.
+
+// Get # of bytes in an array.
+#[inline(always)]
+fn byte_size_of_array<T>(val: &[T]) -> isize {
+    std::mem::size_of_val(&val[..]) as isize
 }
-glium::implement_vertex!(Vertex, position);
 
-enum GameState { Loading, Ready }
+// Get the OpenGL-compatible pointer to an arbitrary array of numbers
+fn pointer_to_array<T>(val: &[T]) -> *const c_void {
+    &val[0] as *const T as *const c_void
+}
+
+// Get the size of the given type in bytes
+#[inline(always)]
+fn size_of<T>() -> i32 {
+    mem::size_of::<T>() as i32
+}
+
+// Get an offset in bytes for n units of type T
+fn offset<T>(n: u32) -> *const c_void {
+    (n * mem::size_of::<T>() as u32) as *const T as *const c_void
+}
+
+
+struct VAOobj {
+    vao: u32,   /* Vertex Array Object */
+    n: i32,     /* Number of triangles */
+}
+
+
+/// Extended mkvao_simple_color to associate colors to vertices
+unsafe fn mkvao(obj: &mesh::Mesh
+    /*verts: &Vec<f32>, idx: &Vec<u32>, colors: &Vec<f32>, norms: &Vec<f32>*/) -> VAOobj {
+
+    /* Create and bind vertex array */
+    let mut vao = 0;
+    gl::GenVertexArrays(1, &mut vao);
+    gl::BindVertexArray(vao);
+
+    /* Create and bind index buffer, add data */
+    let mut ibo = 0;
+    gl::GenBuffers(1, &mut ibo);
+    gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, ibo);
+
+    let ibuf_size = byte_size_of_array(&obj.indices);
+    let ibuf_data = pointer_to_array(&obj.indices);
+
+    gl::BufferData(gl::ELEMENT_ARRAY_BUFFER,
+                   ibuf_size,
+                   ibuf_data as *const _,
+                   gl::STATIC_DRAW);
+
+    // Next sections are vertex attributes
+
+    /* Create and bind vertex buffer, add data */
+    let mut vbo = 0;
+    gl::GenBuffers(1, &mut vbo);
+    gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
+
+    let vbuf_size = byte_size_of_array(&obj.vertices);
+    let vbuf_data = pointer_to_array(&obj.vertices);
+
+    gl::BufferData(gl::ARRAY_BUFFER, 
+                    vbuf_size,
+                    vbuf_data as *const _,
+                    gl::STATIC_DRAW); 
+
+    let mut attrib_idx = 0;
+    /* Define attrib ptr for vertex buffer */
+    gl::EnableVertexAttribArray(attrib_idx);
+    gl::VertexAttribPointer(attrib_idx, 3, gl::FLOAT, gl::FALSE, 0, std::ptr::null());
+
+    /* Create and bind color buffer, add data */
+    let mut cbo = 0;
+    gl::GenBuffers(1, &mut cbo);
+    gl::BindBuffer(gl::ARRAY_BUFFER, cbo);
+
+    let cbuf_size = byte_size_of_array(&obj.colors);
+    let cbuf_data = pointer_to_array(&obj.colors);
+
+    gl::BufferData( gl::ARRAY_BUFFER,
+                    cbuf_size,
+                    cbuf_data as *const _,
+                    gl::STATIC_DRAW);
+
+    attrib_idx += 1;
+    /* Define attrib ptr for color buffer */
+    gl::EnableVertexAttribArray(attrib_idx);
+    gl::VertexAttribPointer(attrib_idx, 4, gl::FLOAT, gl::FALSE, 0, std::ptr::null());
+
+    /* Add normals */
+    let mut nbo = 0;
+    gl::GenBuffers(1, &mut nbo);
+    gl::BindBuffer(gl::ARRAY_BUFFER, nbo);
+    let nbo_size = byte_size_of_array(&obj.normals);
+    let nbo_data = pointer_to_array(&obj.normals);
+
+    gl::BufferData( gl::ARRAY_BUFFER,
+                    nbo_size,
+                    nbo_data as *const _,
+                    gl::STATIC_DRAW);
+    
+    attrib_idx += 1;
+    /* Define attrib ptr for normals buffer */
+    gl::EnableVertexAttribArray(attrib_idx);
+    gl::VertexAttribPointer(attrib_idx, 3, gl::FLOAT, gl::FALSE, 0, std::ptr::null());
+    println!("Create vao={}, ibo={}, vbo={}, cbo={}", vao, ibo, vbo, cbo);
+
+    VAOobj { vao, n: obj.index_count }
+}
+
+
+/// Draw scene from scene graph
+/// * `node` - Current node
+/// * `view_projection_matrix` - Precalculated view and perspective matrix
+/// * `sh` - Active shader
+unsafe fn draw_scene(
+    node: &SceneNode,
+    view_projection_matrix: &glm::Mat4, 
+    sh: &shader::Shader
+) {
+    // Check if node is drawable, set uniforms, draw
+    if node.index_count != -1 {
+
+        gl::BindVertexArray(node.vao_id);
+    
+        let u_mvp = sh.get_uniform_location("u_mvp");
+        let u_model = sh.get_uniform_location("u_model");
+        let mvp = view_projection_matrix * node.current_transformation_matrix;
+        
+        gl::UniformMatrix4fv(u_mvp, 1, gl::FALSE, mvp.as_ptr());
+        gl::UniformMatrix4fv(u_model, 1, gl::FALSE, node.current_transformation_matrix.as_ptr());
+    
+        gl::DrawElements(gl::TRIANGLES, node.index_count, gl::UNSIGNED_INT, std::ptr::null());
+    }
+
+    // Recurse
+    for &child in &node.children {
+        draw_scene(&*child, view_projection_matrix, sh);
+    }
+}
+
+
+unsafe fn update_node_transformations(
+    node: &mut scene_graph::SceneNode,
+    transformation_so_far: &glm::Mat4
+) {
+    // Construct the correct transformation matrix
+    let mut transform = glm::identity();
+    // Translate
+    transform = glm::translate(&transform, &node.position);
+    // Rotate around reference point
+    transform = glm::translate(&transform, &(node.reference_point));
+    transform = glm::rotate_y(&transform, node.rotation[1]);
+    transform = glm::rotate_z(&transform, node.rotation[2]);
+    transform = glm::rotate_x(&transform, node.rotation[0]);
+    // Move back from reference point
+    transform = glm::translate(&transform, &(-node.reference_point));
+    // Scale
+    transform = glm::scale(&transform, &node.scale);
+
+
+    // Update the node's transformation matrix
+    node.current_transformation_matrix = transformation_so_far * transform;
+    // Recurse
+    for &child in &node.children {
+        update_node_transformations(&mut *child, &node.current_transformation_matrix);
+    }
+
+}
+
 
 fn main() {
-    // Setup
-    let mut event_loop = glutin::event_loop::EventLoop::new();
-    let wb = glutin::window::WindowBuilder::new();
-    let cb = glutin::ContextBuilder::new();
-    let display = glium::Display::new(wb,cb, &event_loop).unwrap();
+    //-------------------------------------------------------------------------/
+    // Set up the necessary objects to deal with windows and event handling
+    //-------------------------------------------------------------------------/
+    let el = glutin::event_loop::EventLoop::new();
+    let wb = glutin::window::WindowBuilder::new()
+        .with_title("Gloom-rs")
+        .with_resizable(false)
+        .with_inner_size(glutin::dpi::LogicalSize::new(SCREEN_W, SCREEN_H));
+    let cb = glutin::ContextBuilder::new()
+        .with_vsync(true);
+    let windowed_context = cb.build_windowed(wb, &el).unwrap();
+    // Uncomment these if you want to use the mouse for controls, but want it 
+    // to be confined to the screen and/or invisible.
+    // windowed_context.window().set_cursor_grab(true).expect("failed to grab cursor");
+    // windowed_context.window().set_cursor_visible(false);
 
-    let (window_height, window_width) = display.get_framebuffer_dimensions();
+    // Set up a shared vector for keeping track of currently pressed keys
+    let arc_pressed_keys = Arc::new(Mutex::new(Vec::<VirtualKeyCode>::with_capacity(10)));
+    // Make a reference of this vector to send to the render thread
+    let pressed_keys = Arc::clone(&arc_pressed_keys);
 
-    // Charmap
-    let charmap = image::io::Reader::open("resources/textures/charmap.png").unwrap().decode().unwrap();
-    // image::load(std::io::Cursor::new(&include_bytes!("resources/textures/charmap.png")), image::ImageFormat::Png).unwrap().to_rgba8();
-    let text_mesh = generate_text_geometry_buffer("Hello, World!", 49.0 / 29.0, 2.0);
+    // Set up shared tuple for tracking mouse movement between frames
+    let arc_mouse_delta = Arc::new(Mutex::new((0f32, 0f32)));
+    // Make a reference of this tuple to send to the render thread
+    let mouse_delta = Arc::clone(&arc_mouse_delta);
 
-    // Load shaders
-    let vertex_shader_src = std::fs::read_to_string("resources/shaders/planet.vert").unwrap();
-    let fragment_shader_src = std::fs::read_to_string("resources/shaders/planet.frag").unwrap();
-    // If tessellation shaders are used:
-    let program = glium::program::SourceCode {
-        vertex_shader: &vertex_shader_src,
-        fragment_shader: &fragment_shader_src,
-        tessellation_control_shader: None,
-        tessellation_evaluation_shader: None,
-        geometry_shader: None,
-    };
-    let program = glium::Program::new(&display, program).unwrap();
-    // Simple:
-    // let program = glium::Program::from_source(&display, 
-    //     &vertex_shader_src, 
-    //     &fragment_shader_src, 
-    //     None
-    // ).unwrap();
+    //-------------------------------------------------------------------------/
+    // Spawn a separate thread for rendering, so event handling doesn't 
+    // block rendering
+    //-------------------------------------------------------------------------/
+    let render_thread = thread::spawn(move || {
+        // Acquire the OpenGL Context and load the function pointers. This has 
+        // to be done inside of the rendering thread, because an active OpenGL 
+        // context cannot safely traverse a thread boundary.
 
-
-
-    // Initialize game
-    let shape = vec![
-        Vertex { position: [-0.5, -0.5] },
-        Vertex { position: [ 0.5, -0.25] },
-        Vertex { position: [ 0.5,  0.5] },
-    ];
-    let vertex_buffer = glium::VertexBuffer::new(&display, &shape).unwrap();
-
-    let perspective = glm::perspective(
-        window_height as f32 / window_width as f32, 
-        1.3, 
-        0.01, 
-        1000.0
-    );
-    
-
-    // Event loop
-    event_loop.run(move |ev, _, control_flow| {
-        let next_frame_time = std::time::Instant::now() +
-            std::time::Duration::from_nanos(16_666_667);
-        *control_flow = glutin::event_loop::ControlFlow::WaitUntil(next_frame_time);
-        match ev {
-            glutin::event::Event::WindowEvent {event, .. } => match event {
-                glutin::event::WindowEvent::CloseRequested => {
-                    *control_flow = glutin::event_loop::ControlFlow::Exit;
-                    return
-                },
-                // glutin::event::WindowEvent::KeyboardInput { input, .. } => {
-                //     match input.virtual_keycode {
-                //         Some(glutin::event::VirtualKeyCode::Q) => {
-                //             *control_flow = glutin::event_loop::ControlFlow::Exit;
-                //             return
-
-                //         }
-                //     }
-                // },
-                _ => return,
-            },
-            _ => (),
-        }
-
-        // Draw parameters
-        use glium::draw_parameters;
-        let params = glium::DrawParameters {
-            // depth: glium::Depth {
-            //     test: draw_parameters::DepthTest::IfLess,
-            //     write: true,
-            //     .. Default::default()
-            // },
-            backface_culling: draw_parameters::BackfaceCullingMode::CullCounterClockwise,
-            polygon_mode: draw_parameters::PolygonMode::Line,
-            .. Default::default()
+        let context = unsafe {
+            let c = windowed_context.make_current().unwrap();
+            gl::load_with(|symbol| c.get_proc_address(symbol) as *const _);
+            c
         };
 
-        // Clear screen
-        let mut target = display.draw();
-        
-        target.clear_color(0.0, 0.0, 1.0, 1.0);
-        
-        // Draw
-        target.draw(
-            &vertex_buffer, 
-            &glium::index::NoIndices(glium::index::PrimitiveType::TrianglesList), 
-            &program, 
-            &glium::uniforms::EmptyUniforms, 
-            &params
-        ).unwrap();
+        //---------------------------------------------------------------------/
+        // Set up openGL
+        //---------------------------------------------------------------------/
+        unsafe {
+            gl::Enable(gl::DEPTH_TEST);
+            gl::DepthFunc(gl::LESS);
+            //gl::Enable(gl::CULL_FACE);
+            gl::Disable(gl::MULTISAMPLE);
+            gl::Enable(gl::BLEND);                                  // Enable transparency
+            gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);  //
+            gl::Enable(gl::DEBUG_OUTPUT_SYNCHRONOUS);
+            gl::DebugMessageCallback(Some(util::debug_callback), ptr::null());
 
-        // Finish drawing
-        target.finish().unwrap();
-    });
-}
-
-use obj;
-fn generate_text_geometry_buffer(text: &str, char_h_over_w: f32, total_text_w: f32) -> mesh::Mesh {
-    let char_w = total_text_w / text.len() as f32;
-    let char_h = char_h_over_w * char_w;
-
-    let vertex_count = 4 * text.len();
-    let index_count = 6 * text.len();
-
-    let mut vertices = vec![glm::vec3(0.0f32, 0.0, 0.0); vertex_count];
-    let mut uv_coords = vec![glm::vec2(0.0f32, 0.0); vertex_count];
-    let mut indices = vec![0u32; index_count];
-    let mut normals = vec![glm::vec3(0.0f32, 0.0, 0.0); vertex_count];
-
-    for (i, c) in text.chars().map(|c|c as u8).enumerate() {
-        let base_coord = i as f32 * char_w;
-        vertices[4 * i + 0] = glm::vec3(base_coord as f32, 0.0, 0.0);
-        vertices[4 * i + 1] = glm::vec3(base_coord as f32 + char_w, 0.0, 0.0);
-        vertices[4 * i + 2] = glm::vec3(base_coord as f32 + char_w, char_h, 0.0);
-        
-        vertices[4 * i + 3] = glm::vec3(base_coord as f32, char_h, 0.0);
-
-        uv_coords[4 * i + 0] = glm::vec2(c as f32 / 128.0, 0.0);
-        uv_coords[4 * i + 1] = glm::vec2((c+1) as f32 / 128.0, 0.0);
-        uv_coords[4 * i + 2] = glm::vec2((c+1) as f32 / 128.0, 1.0);
-
-        uv_coords[4 * i + 3] = glm::vec2(c as f32 / 128.0, 1.0);
-
-        normals[4 * i + 0] = glm::vec3(0.0, 0.0, -1.0);
-        normals[4 * i + 1] = glm::vec3(0.0, 0.0, -1.0);
-        normals[4 * i + 2] = glm::vec3(0.0, 0.0, -1.0);
-        normals[4 * i + 3] = glm::vec3(0.0, 0.0, -1.0);
-        
-        indices[4 * i + 0] = (4 * i + 0) as u32;
-        indices[4 * i + 1] = (4 * i + 1) as u32;
-        indices[4 * i + 2] = (4 * i + 2) as u32;
-        indices[4 * i + 3] = (4 * i + 3) as u32;
-        indices[4 * i + 4] = (4 * i + 4) as u32;
-        indices[4 * i + 5] = (4 * i + 5) as u32;
-    }
-
-
-    mesh::Mesh {
-        vertices: vertices,
-        indices: indices,
-        colors: None,
-        index_count: index_count as i32,
-        normals: normals,
-        uv_texture: Some(uv_coords),
-    }
-}
-
-
-fn generate_terrain_texture() {
-    let cell_w = 16;
-    let cell_h = 16;
-}
-
-fn generate_cubesphere() -> mesh::Mesh {
-    use std::f32::consts::PI;
-    let subdivisions = 1;
-    let radius = 1.0;
-
-    let res = subdivisions + 2;
-    let steps = res * 2 - 1;
-    let step_size = PI / steps as f32;
-    // Start with one face
-    let vertex_count = res * res;
-    let face_count = (res - 1) * (res - 1);
-    // let vertex_count = res * res * 2 + subdivisions * 4 * (res - 1);
-    // let face_count = (res - 1) * (res - 1) * 2 * 6;
-    let index_count = face_count * 3;
-
-    let mut vertices = vec![glm::vec3(0.0f32, 0.0, 0.0); vertex_count];
-    let mut normals = vec![glm::vec3(0.0f32, 0.0, 0.0); vertex_count];
-    let mut indices = vec![0u32; index_count];
-
-    let mut i = 0;
-    // Front and back face
-    for y in 0..res {
-        for x in 0..res {
-            let vx = glm::vec3(x, y, 0);
-            let vx: glm::TVec3<f32> = glm::convert(vx);
-            // let pos = glm::vec3(
-            //     f32::cos(PI / 4.0 + x as f32 * step_size),
-            //     f32::sin(PI / 4.0 + x as f32 * step_size),
-
-            // )
-
-            // let vx = glm::vec3(x, y, res-1);
-
+            // Print some diagnostics
+            println!("{}: {}", util::get_gl_string(gl::VENDOR), util::get_gl_string(gl::RENDERER));
+            println!("OpenGL\t: {}", util::get_gl_string(gl::VERSION));
+            println!("GLSL\t: {}", util::get_gl_string(gl::SHADING_LANGUAGE_VERSION));
         }
-    }
-    // for z in 0..subdivisions {
-    //     // Top and bottom
-    //     for x in 0..res {
-    //         let vx = glm::vec3(x, 0, z+1);
 
-    //         let vx = glm::vec3(x, res-1, z+1);
-    //     }
-    //     // Left and right
-    //     for y in 0..subdivisions {
-    //         let vx = glm::vec3(0, y+1, z+1);
+        //---------------------------------------------------------------------/
+        // Read config
+        //---------------------------------------------------------------------/
+        let conf = util::Config::load();
+        // println!("{:?}", conf);
 
-    //         let vx = glm::vec3(res-1, y+1, z+1);
-    //     }
-    // }
+        //---------------------------------------------------------------------/
+        // Camera setup (available for keypress handler)
+        //---------------------------------------------------------------------/
+        let mut position = glm::vec3(
+            conf.init_position[0],
+            conf.init_position[1],
+            conf.init_position[2],
+        );
+        let mut h_angle = conf.init_h_angle;
+        let mut v_angle = conf.init_v_angle;
+        let mut direction = util::vec_direction(h_angle, v_angle);
+        let mut up = glm::vec3(0.0, 1.0, 0.0);
+        let mut right = util::vec_right(h_angle);
 
-    mesh::Mesh {
-        vertices: vertices,
-        indices: indices,
-        normals: normals,
-        colors: None,
-        index_count: index_count as i32,
-        uv_texture: None,
-    }
-}
+        // Controls multipliers
+        let mouse_speed = conf.mouse_speed;
+        let movement_speed = conf.movement_speed;
+        let tilt_speed = conf.tilt_speed;
+
+        let camera_position = match conf.camera_position {
+            0 => ThirdPerson,
+            1 => FirstPerson,
+            2 => unimplemented!(),
+            _ => unreachable!()
+        };
+
+        //---------------------------------------------------------------------/
+        // Lighting
+        //---------------------------------------------------------------------/
+        let diffuse_light = vec![1.0, -1.0, 0.0];
+
+        let v = glm::vec3(1.0, 1.0, 1.0);
+        
+        //---------------------------------------------------------------------/
+        // Vertex Array Objects, create vertices or load models
+        //---------------------------------------------------------------------/
+        let cube_mesh = mesh::Mesh::cube(glm::vec3(0.01, 0.01, 0.01), glm::vec2(1.0, 1.0), true, false, glm::vec3(1.0, 1.0, 1.0));
+        let cube_vao = unsafe { mkvao(&cube_mesh) };
+        let cube_node = SceneNode::from_vao(cube_vao.vao, cube_vao.n);
+
+        /* Load terrain */
+        // let terrain_obj = mesh::Terrain::load("resources/lunarsurface.obj");
+        // let terrain_vao = unsafe { mkvao(&terrain_obj) };
+
+        // /* Load Helicopter */
+        // let helicopter = mesh::Helicopter::load("resources/helicopter.obj");
+        // let heli_door_vao = unsafe { mkvao(&helicopter.door) };
+        // let heli_body_vao = unsafe { mkvao(&helicopter.body) };
+        // let heli_main_rotor_vao = unsafe { mkvao(&helicopter.main_rotor) };
+        // let heli_tail_rotor_vao = unsafe { mkvao(&helicopter.tail_rotor) };
+
+        // let mut doors = false;
+        // let mut doors_start = 0.0;
+
+        //---------------------------------------------------------------------/
+        // Make Scene graph
+        //---------------------------------------------------------------------/
+        //                         - heli_door
+        //           - heli_body { - heli_main_rotor
+        // terrain {               - heli_tail_rotor
+        //           - heli_body ...
+        //           - ...
+        let mut scene_root = SceneNode::new();
+        scene_root.add_child(&cube_node);
+
+        unsafe { update_node_transformations(&mut scene_root, &glm::identity()); }
+
+        scene_root.print();
+
+        // Basic usage of shader helper:
+        // The example code below returns a shader object, which contains the field `.program_id`.
+        // The snippet is not enough to do the assignment, and will need to be modified (outside of
+        // just using the correct path), but it only needs to be called once
+        //
+        //     shader::ShaderBuilder::new()
+        //        .attach_file("./path/to/shader.file")
+        //        .link();
+        //---------------------------------------------------------------------/
+        // Shaders and locating uniforms
+        //---------------------------------------------------------------------/
+        let sh = unsafe {
+            let sh = shader::ShaderBuilder::new()
+                .attach_file("./resources/shaders/scene.vert")
+                .attach_file("./resources/shaders/scene.frag")
+                .link();
+
+            sh.activate();
+            sh
+        };
+
+        //---------------------------------------------------------------------/
+        // Uniform values
+        //---------------------------------------------------------------------/
+        let aspect: f32 = SCREEN_H as f32 / SCREEN_W as f32;
+        let fovy = conf.fov;
+        let perspective_mat: glm::Mat4 = 
+            glm::perspective(
+                aspect,         // aspect
+                fovy,           // fovy
+                conf.clip_near, // near
+                conf.clip_far   // far
+            );
+
+        let first_frame_time = std::time::Instant::now();
+        let mut last_frame_time = first_frame_time;
+        // The main rendering loop
+        loop {
+            let now = std::time::Instant::now();
+            let elapsed = now.duration_since(first_frame_time).as_secs_f32();
+            let delta_time = now.duration_since(last_frame_time).as_secs_f32();
+            last_frame_time = now;
 
 
-struct Mesh {
+            //-----------------------------------------------------------------/
+            // Handle keyboard input
+            //-----------------------------------------------------------------/
+            if let Ok(keys) = pressed_keys.lock() {
+                for key in keys.iter() {
+                    // free camera: let flat_direction =  glm::normalize(&glm::vec3(direction.x, 0.0, direction.z));
+                    // Set movement relative to helicopter rotation
+                    // let heli_direction = util::vec_direction(heli_body_nodes[n_helis].rotation.y, 0.0);
+                    // let flat_direction = -heli_direction; //glm::normalize(&glm::vec3(heli_direction.x, 0.0, heli_direction.z));
+                    // right = glm::cross(&flat_direction, &glm::vec3(0.0, 1.0, 0.0));
+                    
+                    match key {
+                        /* Move left/right */
+                        VirtualKeyCode::A => {
+                            // //heli_body_nodes[n_helis].rotation.z = 0.2;
+                            // tilt_dir.1 = 1;
+                            // heli_body_nodes[n_helis].position -= right * delta_time * movement_speed;
+                            position -= right * delta_time * movement_speed;
+                        },
+                        VirtualKeyCode::D => {
+                            // heli_body_nodes[n_helis].rotation.z = -0.2;
+                            // tilt_dir.1 = -1;
+                            // heli_body_nodes[n_helis].position += right * delta_time * movement_speed;
+                            position += right * delta_time * movement_speed;
+                        },
+                        /* Move forward (inward)/backward, in camera direction */
+                        VirtualKeyCode::W => {
+                            // heli_body_nodes[n_helis].rotation.x = -0.2;
+                            // tilt_dir.0 = -1;
+                            // heli_body_nodes[n_helis].position += flat_direction * delta_time * movement_speed;
+                            position += direction * delta_time * movement_speed;
+                        },
+                        VirtualKeyCode::S => {
+                            // heli_body_nodes[n_helis].rotation.x = 0.2;
+                            // tilt_dir.0 = 1;
+                            // heli_body_nodes[n_helis].position -= flat_direction * delta_time * movement_speed;
+                            position -= direction * delta_time * movement_speed;
+                        },
+                        /* Move up/down */
+                        VirtualKeyCode::Space => {
+                            // heli_body_nodes[n_helis].position += glm::vec3(0.0, 1.0, 0.0) * delta_time * movement_speed;
+                            position += glm::vec3(0.0, 1.0, 0.0) * delta_time * movement_speed;
+                        },
+                        VirtualKeyCode::LShift => {
+                            // heli_body_nodes[n_helis].position -= glm::vec3(0.0, 1.0, 0.0) * delta_time * movement_speed;
+                            position -= glm::vec3(0.0, 1.0, 0.0) * delta_time * movement_speed;
+                        },
+                        _ => { }
+                    }
+                }
+            }
 
+            // Handle mouse movement. delta contains the x and y movement of 
+            // the mouse since last frame in pixels
+            if let Ok(mut delta) = mouse_delta.lock() {
+                /* Look left/right (horizontal angle), rotate around y axis */
+                h_angle -= (*delta).0 * delta_time * mouse_speed;
+                /* Look up/down (vertical angle), rotate around x axis */
+                v_angle -= (*delta).1 * delta_time * mouse_speed;
+                direction = util::vec_direction(h_angle, v_angle);
+                //heli_body_nodes[n_helis].rotation = glm::vec3(-direction.x, -direction.z, -direction.y);
+                right = util::vec_right(h_angle);
+                up = glm::cross(&right, &direction);
+
+                *delta = (0.0, 0.0);
+            }
+
+            unsafe {
+                //-------------------------------------------------------------/
+                // Draw section
+                //-------------------------------------------------------------/
+                // First person view
+                let cam = glm::look_at(&position, &(position+direction), &up);
+                let perspective_view = perspective_mat * cam;
+                // let perspective_view = perspective_mat * glm::look_at(&position, &heli_body_nodes[n_helis].position, &up);
+
+                gl::ClearColor(conf.bg_color[0], conf.bg_color[1], conf.bg_color[2], conf.bg_color[3]);
+                gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
+
+                /* Draw scene graph */
+                update_node_transformations(&mut scene_root, &glm::identity());
+                draw_scene(&scene_root, &perspective_view, &sh);
+            }
+
+            context.swap_buffers().unwrap();
+        }
+    });
+
+    //-------------------------------------------------------------------------/
+    // Keep track of the health of the rendering thread
+    //-------------------------------------------------------------------------/
+    let render_thread_healthy = Arc::new(RwLock::new(true));
+    let render_thread_watchdog = Arc::clone(&render_thread_healthy);
+    thread::spawn(move || {
+        if !render_thread.join().is_ok() {
+            if let Ok(mut health) = render_thread_watchdog.write() {
+                println!("Render thread panicked!");
+                *health = false;
+            }
+        }
+    });
+    
+    //-------------------------------------------------------------------------/
+    // Start the event loop -- This is where window events get handled
+    //-------------------------------------------------------------------------/
+    el.run(move |event, _, control_flow| {
+        *control_flow = ControlFlow::Wait;
+
+        // Terminate program if render thread panics
+        if let Ok(health) = render_thread_healthy.read() {
+            if *health == false {
+                *control_flow = ControlFlow::Exit;
+            }
+        }
+
+        match event {
+            Event::WindowEvent { event: WindowEvent::CloseRequested, .. } => {
+                *control_flow = ControlFlow::Exit;
+            },
+            // Keep track of currently pressed keys to send to the rendering thread
+            Event::WindowEvent { event: WindowEvent::KeyboardInput {
+                input: KeyboardInput { state: key_state, virtual_keycode: Some(keycode), .. }, .. }, .. } => {
+
+                if let Ok(mut keys) = arc_pressed_keys.lock() {
+                    match key_state {
+                        Released => {
+                            if keys.contains(&keycode) {
+                                let i = keys.iter().position(|&k| k == keycode).unwrap();
+                                keys.remove(i);
+                            }
+                        },
+                        Pressed => {
+                            if !keys.contains(&keycode) {
+                                keys.push(keycode);
+                            }
+                        }
+                    }
+                }
+                // Handle escape separately
+                match keycode {
+                    Escape => {
+                        *control_flow = ControlFlow::Exit;
+                    },
+                    Q => {
+                        /////*control_flow = ControlFlow::Exit;
+                    },
+                    _ => { }
+                }
+            },
+            Event::DeviceEvent { event: DeviceEvent::MouseMotion { delta }, .. } => {
+                // Accumulate mouse movement
+                if let Ok(mut position) = arc_mouse_delta.lock() {
+                    *position = (position.0 + delta.0 as f32, position.1 + delta.1 as f32);
+                }
+            },
+            _ => { }
+        }
+    });
 }

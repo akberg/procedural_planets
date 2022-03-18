@@ -6,7 +6,12 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-glium = "0.31.0"
+# glium = "0.31.0"
+glutin = "0.28.0"
+gl = "0.14.0"
 nalgebra-glm = "0.16.0"
-obj-rs = { version = "0.7.0", features = ["glium"] }
+# obj-rs = { version = "0.7.0", features = ["glium"] }
+tobj = "3.2.1"
 image = "0.24.1"
+itertools = "0.10.3"
+num = "0.4.0"
