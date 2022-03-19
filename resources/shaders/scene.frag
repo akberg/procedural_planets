@@ -20,7 +20,7 @@ void main()
     vec3 half_direction = normalize(normalize(light) + camera_dir);
     float specular = pow(max(dot(half_direction, normalize(v_normal)), 0.0), 16.0);
 
-    color = vec4(1.0, 0.1, 0.9, 1.0);
+    //color = vec4(1.0, 0.1, 0.9, 1.0);
     //color = vec4(v_color.rgb * max(0, dot(v_normal, -light)), v_color.a);
-    //color = vec4(ambient_color + diffuse * diffuse_color + specular * specular_color, 1.0);
+    color = vec4(ambient_color + diffuse * diffuse_color + specular * specular_color, 1.0);
 }

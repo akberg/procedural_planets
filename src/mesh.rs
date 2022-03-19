@@ -9,45 +9,51 @@ fn generate_color_vec(color: glm::TVec4<f32>, num: usize) -> Vec<f32> {
     glm::value_ptr(&color).iter().cloned().cycle().take(num*4).collect()
     //color.iter().cloned().cycle().take(num*4).collect()
 }
+/// Convert an array of Vec2 into an array of numbers
 pub fn from_array_of_vec2<T: Scalar + Copy>(arr: Vec<glm::TVec2<T>>) -> Vec<T> {
     arr.iter()
-        .map(|v| vec![v[0], v[1]])
-        .flatten()
-        .collect::<_>()
+    .map(|v| vec![v[0], v[1]])
+    .flatten()
+    .collect::<_>()
 }
+/// Convert an array of Vec3 into an array of numbers
 pub fn from_array_of_vec3<T: Scalar + Copy>(arr: Vec<glm::TVec3<T>>) -> Vec<T> {
     arr.iter()
-        .map(|v| vec![v[0], v[1], v[2]])
-        .flatten()
-        .collect::<_>()
+    .map(|v| vec![v[0], v[1], v[2]])
+    .flatten()
+    .collect::<_>()
 }
+/// Convert an array of Vec4 into an array of numbers
 pub fn from_array_of_vec4<T: Scalar + Copy>(arr: Vec<glm::TVec4<T>>) -> Vec<T> {
     arr.iter()
         .map(|v| vec![v[0], v[1], v[2], v[3]])
         .flatten()
         .collect::<_>()
 }
+/// Convert an array of numbers representing 2-tuples to array of vec2
 pub fn to_array_of_vec2<T: Scalar + Copy>(arr: Vec<T>) -> Vec<glm::TVec2<T>> {
     arr.iter()
-        .chunks(2)
-        .into_iter()
-        .map(|mut step| glm::vec2(
-            *step.next().unwrap(), 
-            *step.next().unwrap()
-        ))
-        .collect::<_>()
+    .chunks(2)
+    .into_iter()
+    .map(|mut step| glm::vec2(
+        *step.next().unwrap(), 
+        *step.next().unwrap()
+    ))
+    .collect::<_>()
 }
+/// Convert an array of numbers representing 3-tuples to array of vec3
 pub fn to_array_of_vec3<T: Scalar + Copy>(arr: Vec<T>) -> Vec<glm::TVec3<T>> {
     arr.iter()
-        .chunks(3)
-        .into_iter()
-        .map(|mut step| glm::vec3(
-            *step.next().unwrap(), 
-            *step.next().unwrap(),
-            *step.next().unwrap(),
-        ))
-        .collect::<_>()
+    .chunks(3)
+    .into_iter()
+    .map(|mut step| glm::vec3(
+        *step.next().unwrap(), 
+        *step.next().unwrap(),
+        *step.next().unwrap(),
+    ))
+    .collect::<_>()
 }
+/// Convert an array of numbers representing 4-tuples to array of vec4
 pub fn to_array_of_vec4<T: Scalar + Copy>(arr: Vec<T>) -> Vec<glm::TVec4<T>> {
     arr.iter()
         .chunks(4)
@@ -87,7 +93,8 @@ impl Mesh {
         texture_scale: glm::TVec2<f32>,
         tiling_textures: bool,
         inverted: bool,
-        texture_scale3d: glm::TVec3<f32>
+        texture_scale3d: glm::TVec3<f32>,
+        color: glm::TVec4<f32>
     ) -> Self {
         let mut points = [glm::vec3(0.0, 0.0, 0.0); 8];
         let mut indices = vec![0; 36];
@@ -181,12 +188,12 @@ impl Mesh {
                 }
             }
         }
-
+        let vertex_count = vertices.len();
         Mesh {
             vertices: from_array_of_vec3(vertices),
             indices: mindices,
             normals: from_array_of_vec3(mnormals),
-            colors: Vec::new(),
+            colors: generate_color_vec(color, vertex_count),
             index_count: 36
         }
     }

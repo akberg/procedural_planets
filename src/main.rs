@@ -41,11 +41,13 @@ fn pointer_to_array<T>(val: &[T]) -> *const c_void {
 }
 
 // Get the size of the given type in bytes
+#[allow(unused)]
 #[inline(always)]
 fn size_of<T>() -> i32 {
     mem::size_of::<T>() as i32
 }
 
+#[allow(unused)]
 // Get an offset in bytes for n units of type T
 fn offset<T>(n: u32) -> *const c_void {
     (n * mem::size_of::<T>() as u32) as *const T as *const c_void
@@ -59,8 +61,7 @@ struct VAOobj {
 
 
 /// Extended mkvao_simple_color to associate colors to vertices
-unsafe fn mkvao(obj: &mesh::Mesh
-    /*verts: &Vec<f32>, idx: &Vec<u32>, colors: &Vec<f32>, norms: &Vec<f32>*/) -> VAOobj {
+unsafe fn mkvao(obj: &mesh::Mesh) -> VAOobj {
 
     /* Create and bind vertex array */
     let mut vao = 0;
@@ -169,6 +170,7 @@ unsafe fn draw_scene(
         draw_scene(&*child, view_projection_matrix, sh);
     }
 }
+
 
 
 unsafe fn update_node_transformations(
@@ -303,7 +305,12 @@ fn main() {
         //---------------------------------------------------------------------/
         // Vertex Array Objects, create vertices or load models
         //---------------------------------------------------------------------/
-        let cube_mesh = mesh::Mesh::cube(glm::vec3(0.01, 0.01, 0.01), glm::vec2(1.0, 1.0), true, false, glm::vec3(1.0, 1.0, 1.0));
+        let cube_mesh = mesh::Mesh::cube(
+            glm::vec3(0.1, 0.1, 0.1), 
+            glm::vec2(1.0, 1.0), true, false, 
+            glm::vec3(1.0, 1.0, 1.0),
+            glm::vec4(1.0, 0.0, 0.0, 1.0),
+        );
         let cube_vao = unsafe { mkvao(&cube_mesh) };
         let cube_node = SceneNode::from_vao(cube_vao.vao, cube_vao.n);
 
