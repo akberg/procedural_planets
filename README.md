@@ -27,7 +27,7 @@ Keywords:
 * Lighting: A sun, could try to add an atmosphere
 * Particles: stones, trees
 * Controller: A spaceship mesh
-* Skybox
+* Skybox: stars and ambient light
 
 https://www.researchgate.net/publication/226410924_Spherical_Parameterization_of_Marching_Cubes_IsoSurfaces_Based_upon_Nearest_Neighbor_Coordinates
 
