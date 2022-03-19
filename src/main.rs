@@ -8,7 +8,7 @@ mod util;
 mod mesh;
 mod scene_graph;
 
-use scene_graph::SceneNode;
+use scene_graph::{SceneNode, SceneNodeType, LightSource, LightSourceType};
 use util::CameraPosition::*;
 
 use glutin::event::{
@@ -24,34 +24,6 @@ use glutin::event_loop::ControlFlow;
 
 const SCREEN_W: u32 = 800;
 const SCREEN_H: u32 = 600;
-
-// Helper functions to make interacting with OpenGL a little bit 
-// prettier. You *WILL* need these! The names should be pretty self 
-// explanatory.
-
-// Get # of bytes in an array.
-#[inline(always)]
-fn byte_size_of_array<T>(val: &[T]) -> isize {
-    std::mem::size_of_val(&val[..]) as isize
-}
-
-// Get the OpenGL-compatible pointer to an arbitrary array of numbers
-fn pointer_to_array<T>(val: &[T]) -> *const c_void {
-    &val[0] as *const T as *const c_void
-}
-
-// Get the size of the given type in bytes
-#[allow(unused)]
-#[inline(always)]
-fn size_of<T>() -> i32 {
-    mem::size_of::<T>() as i32
-}
-
-#[allow(unused)]
-// Get an offset in bytes for n units of type T
-fn offset<T>(n: u32) -> *const c_void {
-    (n * mem::size_of::<T>() as u32) as *const T as *const c_void
-}
 
 
 struct VAOobj {
@@ -73,8 +45,8 @@ unsafe fn mkvao(obj: &mesh::Mesh) -> VAOobj {
     gl::GenBuffers(1, &mut ibo);
     gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, ibo);
 
-    let ibuf_size = byte_size_of_array(&obj.indices);
-    let ibuf_data = pointer_to_array(&obj.indices);
+    let ibuf_size = util::byte_size_of_array(&obj.indices);
+    let ibuf_data = util::pointer_to_array(&obj.indices);
 
     gl::BufferData(gl::ELEMENT_ARRAY_BUFFER,
                    ibuf_size,
@@ -88,8 +60,8 @@ unsafe fn mkvao(obj: &mesh::Mesh) -> VAOobj {
     gl::GenBuffers(1, &mut vbo);
     gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
 
-    let vbuf_size = byte_size_of_array(&obj.vertices);
-    let vbuf_data = pointer_to_array(&obj.vertices);
+    let vbuf_size = util::byte_size_of_array(&obj.vertices);
+    let vbuf_data = util::pointer_to_array(&obj.vertices);
 
     gl::BufferData(gl::ARRAY_BUFFER, 
                     vbuf_size,
@@ -106,8 +78,8 @@ unsafe fn mkvao(obj: &mesh::Mesh) -> VAOobj {
     gl::GenBuffers(1, &mut cbo);
     gl::BindBuffer(gl::ARRAY_BUFFER, cbo);
 
-    let cbuf_size = byte_size_of_array(&obj.colors);
-    let cbuf_data = pointer_to_array(&obj.colors);
+    let cbuf_size = util::byte_size_of_array(&obj.colors);
+    let cbuf_data = util::pointer_to_array(&obj.colors);
 
     gl::BufferData( gl::ARRAY_BUFFER,
                     cbuf_size,
@@ -123,8 +95,8 @@ unsafe fn mkvao(obj: &mesh::Mesh) -> VAOobj {
     let mut nbo = 0;
     gl::GenBuffers(1, &mut nbo);
     gl::BindBuffer(gl::ARRAY_BUFFER, nbo);
-    let nbo_size = byte_size_of_array(&obj.normals);
-    let nbo_data = pointer_to_array(&obj.normals);
+    let nbo_size = util::byte_size_of_array(&obj.normals);
+    let nbo_data = util::pointer_to_array(&obj.normals);
 
     gl::BufferData( gl::ARRAY_BUFFER,
                     nbo_size,
@@ -135,70 +107,58 @@ unsafe fn mkvao(obj: &mesh::Mesh) -> VAOobj {
     /* Define attrib ptr for normals buffer */
     gl::EnableVertexAttribArray(attrib_idx);
     gl::VertexAttribPointer(attrib_idx, 3, gl::FLOAT, gl::FALSE, 0, std::ptr::null());
-    println!("Create vao={}, ibo={}, vbo={}, cbo={}", vao, ibo, vbo, cbo);
+
+    /* Add texture coordinates */
+    let mut texbo = 0;
+    gl::GenBuffers(1, &mut texbo);
+    gl::BindBuffer(gl::ARRAY_BUFFER, texbo);
+    let texbo_size = util::byte_size_of_array(&obj.texture_coordinates);
+    let texbo_data = util::pointer_to_array(&obj.texture_coordinates);
+
+    gl::BufferData( gl::ARRAY_BUFFER,
+                    texbo_size,
+                    texbo_data as *const _,
+                    gl::STATIC_DRAW);
+    
+    attrib_idx += 1;
+    /* Define attrib ptr for normals buffer */
+    gl::EnableVertexAttribArray(attrib_idx);
+    gl::VertexAttribPointer(attrib_idx, 2, gl::FLOAT, gl::FALSE, 0, std::ptr::null());
+
+    println!("Create vao={}, ibo={}, vbo={}, cbo={}, texbo={}", vao, ibo, vbo, cbo, texbo);
 
     VAOobj { vao, n: obj.index_count }
 }
+unsafe fn get_texture_id(img: &image::DynamicImage) -> u32 {
+    use image::GenericImageView;
 
+    println!("Generating texture id for image with dimensions {:?}", img.dimensions());
 
-/// Draw scene from scene graph
-/// * `node` - Current node
-/// * `view_projection_matrix` - Precalculated view and perspective matrix
-/// * `sh` - Active shader
-unsafe fn draw_scene(
-    node: &SceneNode,
-    view_projection_matrix: &glm::Mat4, 
-    sh: &shader::Shader
-) {
-    // Check if node is drawable, set uniforms, draw
-    if node.index_count != -1 {
+    let mut tex_id = 0;
+    gl::GenTextures(1, &mut tex_id);
 
-        gl::BindVertexArray(node.vao_id);
-    
-        let u_mvp = sh.get_uniform_location("u_mvp");
-        let u_model = sh.get_uniform_location("u_model");
-        let mvp = view_projection_matrix * node.current_transformation_matrix;
-        
-        gl::UniformMatrix4fv(u_mvp, 1, gl::FALSE, mvp.as_ptr());
-        gl::UniformMatrix4fv(u_model, 1, gl::FALSE, node.current_transformation_matrix.as_ptr());
-    
-        gl::DrawElements(gl::TRIANGLES, node.index_count, gl::UNSIGNED_INT, std::ptr::null());
-    }
+    gl::BindTexture(gl::TEXTURE_2D, tex_id);
 
-    // Recurse
-    for &child in &node.children {
-        draw_scene(&*child, view_projection_matrix, sh);
-    }
-}
+    // gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::REPEAT as i32);
+    // gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::REPEAT as i32);
+    gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::NEAREST_MIPMAP_LINEAR as i32);
+    gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as i32);
 
+    gl::TexImage2D(
+        gl::TEXTURE_2D,
+        0,
+        gl::RGBA as i32,
+        img.dimensions().0 as i32,
+        img.dimensions().1 as i32,
+        0,
+        gl::RGBA,
+        gl::UNSIGNED_BYTE,
+        util::pointer_to_array(&img.as_bytes())
+    );
 
+    gl::GenerateMipmap(gl::TEXTURE_2D);
 
-unsafe fn update_node_transformations(
-    node: &mut scene_graph::SceneNode,
-    transformation_so_far: &glm::Mat4
-) {
-    // Construct the correct transformation matrix
-    let mut transform = glm::identity();
-    // Translate
-    transform = glm::translate(&transform, &node.position);
-    // Rotate around reference point
-    transform = glm::translate(&transform, &(node.reference_point));
-    transform = glm::rotate_y(&transform, node.rotation[1]);
-    transform = glm::rotate_z(&transform, node.rotation[2]);
-    transform = glm::rotate_x(&transform, node.rotation[0]);
-    // Move back from reference point
-    transform = glm::translate(&transform, &(-node.reference_point));
-    // Scale
-    transform = glm::scale(&transform, &node.scale);
-
-
-    // Update the node's transformation matrix
-    node.current_transformation_matrix = transformation_so_far * transform;
-    // Recurse
-    for &child in &node.children {
-        update_node_transformations(&mut *child, &node.current_transformation_matrix);
-    }
-
+    tex_id
 }
 
 
@@ -250,7 +210,7 @@ fn main() {
         unsafe {
             gl::Enable(gl::DEPTH_TEST);
             gl::DepthFunc(gl::LESS);
-            //gl::Enable(gl::CULL_FACE);
+            gl::Enable(gl::CULL_FACE);
             gl::Disable(gl::MULTISAMPLE);
             gl::Enable(gl::BLEND);                                  // Enable transparency
             gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);  //
@@ -305,6 +265,8 @@ fn main() {
         //---------------------------------------------------------------------/
         // Vertex Array Objects, create vertices or load models
         //---------------------------------------------------------------------/
+
+        // Placeholder cube, will become a cubesphere at some point
         let cube_mesh = mesh::Mesh::cube(
             glm::vec3(0.1, 0.1, 0.1), 
             glm::vec2(1.0, 1.0), true, false, 
@@ -314,6 +276,39 @@ fn main() {
         let cube_vao = unsafe { mkvao(&cube_mesh) };
         let cube_node = SceneNode::from_vao(cube_vao.vao, cube_vao.n);
 
+        // Skybox, inverted cube that stays centered around the player
+        let skybox_mesh = mesh::Mesh::cube(
+            glm::vec3(conf.clip_far-0.1, conf.clip_far-0.1, conf.clip_far-0.1), // Defines visible distance of other objects
+            glm::vec2(1.0, 1.0), true, true, 
+            glm::vec3(1.0, 1.0, 1.0),
+            glm::vec4(0.01, 0.01, 0.06, 0.2),
+        );
+        let skybox_vao = unsafe { mkvao(&skybox_mesh) };
+        let mut skybox_node = SceneNode::from_vao(skybox_vao.vao, skybox_vao.n);
+        skybox_node.node_type = SceneNodeType::Skybox;
+
+        let plane_mesh = mesh::Mesh::plane(glm::vec3(2.0, 2.0, 2.0), 8, true);
+        let plane_vao = unsafe { mkvao(&plane_mesh) };
+        let mut plane_node = SceneNode::from_vao(plane_vao.vao, plane_vao.n);
+        plane_node.position.y -= 1.0;
+        
+
+        // let my_text = mesh::Mesh::text_buffer("0123456789", 49.0 / 29.0, 2.0);
+        // println!("text texture coordinates: {:?}", my_text.texture_coordinates);
+        // let text_vao = unsafe {mkvao(&my_text)};
+        // let mut text_node = SceneNode::from_vao(text_vao.vao, text_vao.n);
+        // text_node.node_type = SceneNodeType::Geometry2d;
+
+        // let charmap = image::open("resources/textures/charmap.png").unwrap().flipv();
+        // use std::io::Cursor;
+        // use image::io::Reader as ImageReader;
+        // let charmap = ImageReader::open("resources/textures/charmap.png").unwrap().decode().unwrap().flipv();
+
+        // let charmap_id = unsafe { get_texture_id(&charmap) };
+        // text_node.texture_id = Some(charmap_id);
+        // text_node.position = glm::vec3(-0.5, 0.0, 0.0);
+        // text_node.scale = glm::vec3(0.2, 0.2, 0.2);
+        
         /* Load terrain */
         // let terrain_obj = mesh::Terrain::load("resources/lunarsurface.obj");
         // let terrain_vao = unsafe { mkvao(&terrain_obj) };
@@ -331,15 +326,13 @@ fn main() {
         //---------------------------------------------------------------------/
         // Make Scene graph
         //---------------------------------------------------------------------/
-        //                         - heli_door
-        //           - heli_body { - heli_main_rotor
-        // terrain {               - heli_tail_rotor
-        //           - heli_body ...
-        //           - ...
         let mut scene_root = SceneNode::new();
         scene_root.add_child(&cube_node);
+        //scene_root.add_child(&skybox_node);
+        // scene_root.add_child(&text_node);
+        scene_root.add_child(&plane_node);
 
-        unsafe { update_node_transformations(&mut scene_root, &glm::identity()); }
+        unsafe { scene_root.update_node_transformations(&glm::identity()); }
 
         scene_root.print();
 
@@ -367,7 +360,7 @@ fn main() {
         //---------------------------------------------------------------------/
         // Uniform values
         //---------------------------------------------------------------------/
-        let aspect: f32 = SCREEN_H as f32 / SCREEN_W as f32;
+        let aspect: f32 = SCREEN_W as f32 / SCREEN_H as f32;
         let fovy = conf.fov;
         let perspective_mat: glm::Mat4 = 
             glm::perspective(
@@ -392,7 +385,7 @@ fn main() {
             //-----------------------------------------------------------------/
             if let Ok(keys) = pressed_keys.lock() {
                 for key in keys.iter() {
-                    // free camera: let flat_direction =  glm::normalize(&glm::vec3(direction.x, 0.0, direction.z));
+                    let flat_direction =  glm::normalize(&glm::vec3(direction.x, 0.0, direction.z));
                     // Set movement relative to helicopter rotation
                     // let heli_direction = util::vec_direction(heli_body_nodes[n_helis].rotation.y, 0.0);
                     // let flat_direction = -heli_direction; //glm::normalize(&glm::vec3(heli_direction.x, 0.0, heli_direction.z));
@@ -417,13 +410,13 @@ fn main() {
                             // heli_body_nodes[n_helis].rotation.x = -0.2;
                             // tilt_dir.0 = -1;
                             // heli_body_nodes[n_helis].position += flat_direction * delta_time * movement_speed;
-                            position += direction * delta_time * movement_speed;
+                            position += flat_direction * delta_time * movement_speed;
                         },
                         VirtualKeyCode::S => {
                             // heli_body_nodes[n_helis].rotation.x = 0.2;
                             // tilt_dir.0 = 1;
                             // heli_body_nodes[n_helis].position -= flat_direction * delta_time * movement_speed;
-                            position -= direction * delta_time * movement_speed;
+                            position -= flat_direction * delta_time * movement_speed;
                         },
                         /* Move up/down */
                         VirtualKeyCode::Space => {
@@ -454,6 +447,8 @@ fn main() {
                 *delta = (0.0, 0.0);
             }
 
+            skybox_node.position = position;
+
             unsafe {
                 //-------------------------------------------------------------/
                 // Draw section
@@ -467,8 +462,9 @@ fn main() {
                 gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
 
                 /* Draw scene graph */
-                update_node_transformations(&mut scene_root, &glm::identity());
-                draw_scene(&scene_root, &perspective_view, &sh);
+                gl::PolygonMode(gl::FRONT_AND_BACK, gl::LINE);
+                scene_root.update_node_transformations(&glm::identity());
+                scene_root.draw_scene(&perspective_view, &sh);
             }
 
             context.swap_buffers().unwrap();

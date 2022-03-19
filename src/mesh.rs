@@ -67,9 +67,14 @@ pub fn to_array_of_vec4<T: Scalar + Copy>(arr: Vec<T>) -> Vec<glm::TVec4<T>> {
         .collect::<_>()
 }
 
+//-----------------------------------------------------------------------------/
+// Mesh
+//-----------------------------------------------------------------------------/
+
 pub struct Mesh {
     pub vertices: Vec<f32>,
     pub normals: Vec<f32>,
+    pub texture_coordinates: Vec<f32>,
     pub colors: Vec<f32>,
     pub indices: Vec<u32>,
     pub index_count: i32,
@@ -82,6 +87,7 @@ impl Mesh {
         Mesh {
             vertices: mesh.positions,
             normals: mesh.normals,
+            texture_coordinates: if mesh.texcoords.len() > 0 { mesh.texcoords } else { vec![0.0; num_verts * 2] },
             indices: mesh.indices,
             colors: generate_color_vec(color, num_verts),
             index_count,
@@ -193,83 +199,102 @@ impl Mesh {
             vertices: from_array_of_vec3(vertices),
             indices: mindices,
             normals: from_array_of_vec3(mnormals),
+            texture_coordinates: from_array_of_vec2(texture_coordinates),
             colors: generate_color_vec(color, vertex_count),
             index_count: 36
         }
     }
-}
 
-pub fn generate_cube(scale: glm::TVec3<f32>, color: glm::TVec4<f32>) -> Mesh {
-    let vertex_count = 4*6;
-    let mut vertices = vec![glm::vec3(0.0f32, 0.0, 0.0);3*vertex_count];
-    let mut normals = vec![glm::vec3(0.0f32, 0.0, 0.0);3*vertex_count];
-    let index_count = 3*6*6;
-    let mut indices = vec![0u32;index_count];
+    pub fn text_buffer(text: &str, char_height_over_width: f32, total_text_width: f32) -> Self {
+        let char_w = total_text_width / text.len() as f32;
+        let char_h = char_height_over_width * char_w;
 
-    let v_normals = [
-        glm::vec3(0.0, 0.0, -1.0),
-        glm::vec3(1.0, 0.0, 0.0),
-        glm::vec3(0.0, 0.0, 1.0),
-        glm::vec3(0.0, 0.0, -1.0),
-        glm::vec3(0.0, 1.0, 0.0),
-        glm::vec3(0.0, -1.0, 0.0),
-    ];
+        let vertex_count = 4 * text.len();
+        let index_count = 6 * text.len() as i32;
 
-    for i in 0..6 {
-        indices[3*6*i + 0] = 3*4*i as u32 + 0;
-        indices[3*6*i + 1] = 3*4*i as u32 + 3;
-        indices[3*6*i + 2] = 3*4*i as u32 + 1;
+        let mut vertices = vec![glm::vec3(0.0, 0.0, 0.0); vertex_count];
+        let mut texture = vec![glm::vec2(0.0, 0.0); vertex_count];
+        let mut normals = vec![glm::vec3(0.0, 0.0, 0.0); vertex_count];
+        let mut indices = vec![0; index_count as usize];
 
-        indices[3*6*i + 3] = 3*4*i as u32 + 0;
-        indices[3*6*i + 4] = 3*4*i as u32 + 2;
-        indices[3*6*i + 5] = 3*4*i as u32 + 3;
+        for (i, c) in text.chars().enumerate() {
+            println!("{}", c as u8);
+            let base_x = i as f32 * char_w;
 
-        normals[4*i + 0] = v_normals[i];
-        normals[4*i + 1] = v_normals[i];
-        normals[4*i + 2] = v_normals[i];
-        normals[4*i + 3] = v_normals[i];
+            vertices[4 * i + 0] = glm::vec3(base_x, 0.0, 0.0);
+            vertices[4 * i + 1] = glm::vec3(base_x + char_w, 0.0, 0.0);
+            vertices[4 * i + 2] = glm::vec3(base_x + char_w, char_h, 0.0);
+            vertices[4 * i + 3] = glm::vec3(base_x, char_h, 0.0);
 
-        normals[4*i + 3] = v_normals[i];
+            normals[4 * i + 0] = glm::vec3(0.0, 0.0, -1.0);
+            normals[4 * i + 1] = glm::vec3(0.0, 0.0, -1.0);
+            normals[4 * i + 2] = glm::vec3(0.0, 0.0, -1.0);
+            normals[4 * i + 3] = glm::vec3(0.0, 0.0, -1.0);
+
+            texture[4 * i + 0] = glm::vec2((c as u8) as f32 / 128.0, 0.0);
+            texture[4 * i + 1] = glm::vec2((c as u8 + 1) as f32 / 128.0, 0.0);
+            texture[4 * i + 2] = glm::vec2((c as u8 + 1) as f32 / 128.0, 1.0);
+            texture[4 * i + 3] = glm::vec2((c as u8) as f32 / 128.0, 1.0);
+
+            indices[6 * i + 0] = 4 * i as u32 + 0;
+            indices[6 * i + 1] = 4 * i as u32 + 1;
+            indices[6 * i + 2] = 4 * i as u32 + 2;
+            indices[6 * i + 3] = 4 * i as u32 + 0;
+            indices[6 * i + 4] = 4 * i as u32 + 2;
+            indices[6 * i + 5] = 4 * i as u32 + 3;
+        }
+
+        Mesh {
+            vertices: from_array_of_vec3(vertices),
+            normals: from_array_of_vec3(normals),
+            texture_coordinates: from_array_of_vec2(texture),
+            colors: generate_color_vec(glm::vec4(1.0, 1.0, 1.0, 1.0), vertex_count),
+            indices,
+            index_count,
+        }
     }
 
-    // vertices[0] = glm::vec3(-1.0, 1.0, -1.0).component_mul(&scale);
-    // vertices[13] = glm::vec3(-1.0, 1.0, -1.0).component_mul(&scale);
-    // vertices[18] = glm::vec3(-1.0, 1.0, -1.0).component_mul(&scale);
+    pub fn plane(scale: glm::TVec3<f32>, subdivisions: usize, tiling_textures: bool) -> Self {
+        let res = 1 + subdivisions;
+        let vertex_count = res * res;
+        let index_count = 6 * (res-1) * (res-1);
+        let mut vertices = vec![glm::vec3(0.0, 0.0, 0.0); vertex_count];
+        let normals = vec![glm::vec3(0.0, 1.0, 0.0); vertex_count];
+        let mut texture = vec![glm::vec2(0.0, 0.0); vertex_count];
+        let mut indices = vec![0; index_count];
 
-    // vertices[1] = glm::vec3(1.0, 1.0, -1.0).component_mul(&scale);
-    // vertices[4] = glm::vec3(1.0, 1.0, -1.0).component_mul(&scale);
-    // vertices[19] = glm::vec3(1.0, 1.0, -1.0).component_mul(&scale);
+        for y in 0..res {
+            for x in 0..res {
+                vertices[y * res + x] = glm::vec3(
+                    2.0 * x as f32 / res as f32 - 1.0,
+                    0.0,
+                    2.0 * y as f32 / res as f32 - 1.0,
+                ).component_mul(&scale) * 0.5;
+                texture[y * res + x] = glm::vec2(
+                    x as f32 / res as f32,
+                    y as f32 / res as f32,
+                );
+                if y < subdivisions && x < subdivisions {
+                    let offset = 6 * (y * subdivisions + x);
+                    indices[offset + 0] = (y * res + x + 1) as u32;
+                    indices[offset + 1] = (y * res + x + 0) as u32;
+                    indices[offset + 2] = ((y + 1) * res + x + 1) as u32;
 
-    // vertices[2] = glm::vec3(-1.0, -1.0, -1.0).component_mul(&scale);
-    // vertices[15] = glm::vec3(-1.0, -1.0, -1.0).component_mul(&scale);
-    // vertices[20] = glm::vec3(-1.0, -1.0, -1.0).component_mul(&scale);
+                    indices[offset + 3] = (y * res + x) as u32;
+                    indices[offset + 4] = ((y + 1) * res + x) as u32;
+                    indices[offset + 5] = ((y + 1) * res + x + 1) as u32;
+                }
+            }
+        }
 
-    // vertices[3] = glm::vec3(1.0, -1.0, -1.0).component_mul(&scale);
-    // vertices[6] = glm::vec3(1.0, -1.0, -1.0).component_mul(&scale);
-    // vertices[21] = glm::vec3(1.0, -1.0, -1.0).component_mul(&scale);
-
-    vertices[8] = glm::vec3(1.0, 1.0, 1.0).component_mul(&scale);
-    // vertices[5] = glm::vec3(1.0, 1.0, 1.0).component_mul(&scale);
-    // vertices[17] = glm::vec3(1.0, 1.0, 1.0).component_mul(&scale);
-
-    vertices[9] = glm::vec3(-1.0, 1.0, 1.0).component_mul(&scale);
-    // vertices[12] = glm::vec3(-1.0, 1.0, 1.0).component_mul(&scale);
-    // vertices[16] = glm::vec3(-1.0, 1.0, 1.0).component_mul(&scale);
-
-    vertices[10] = glm::vec3(1.0, -1.0, 1.0).component_mul(&scale);
-    // vertices[17] = glm::vec3(1.0, -1.0, 1.0).component_mul(&scale);
-    // vertices[23] = glm::vec3(1.0, -1.0, 1.0).component_mul(&scale);
-
-    vertices[11] = glm::vec3(-1.0, -1.0, 1.0).component_mul(&scale);
-    // vertices[14] = glm::vec3(-1.0, -1.0, 1.0).component_mul(&scale);
-    // vertices[22] = glm::vec3(-1.0, -1.0, 1.0).component_mul(&scale);
-
-    Mesh {
-        vertices: from_array_of_vec3(vertices),
-        normals: from_array_of_vec3(normals),
-        indices,
-        index_count: index_count as i32,
-        colors: generate_color_vec(color, 36)
+        Mesh {
+            vertices: from_array_of_vec3(vertices),
+            normals: from_array_of_vec3(normals),
+            texture_coordinates: from_array_of_vec2(texture),
+            colors: generate_color_vec(glm::vec4(1.0, 1.0, 1.0, 1.0), vertex_count),
+            indices,
+            index_count: index_count as i32,
+        }
     }
 }
 
