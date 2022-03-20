@@ -1,3 +1,10 @@
+# README
+
+## State of the project
+
+![Generate a cubesphere, vertices should be quite evenly distributed](report/images/cubesphere-wf.png)
+![Added noise to displace the vertices](report/images/cubesphere-w-vertex-noise.png)
+
 ## Project description: Procedurally generated planet
 
 For the final project I would like to make an attempt at creating a procedurally generated planet. I want to be able to render it from far away and have it become more detailed as the player closes in, which means having to apply some LoD techniques, e.g. partition the planet into chunks, resampling in higher resolution as a chunk comes closer, or adapting vertex count to local shape complexity. If this turns out too easy, I'd like to add more planets and place them in some solar system.
@@ -29,6 +36,8 @@ Keywords:
 * Particles: stones, trees
 * Controller: A spaceship mesh
 * Skybox: stars and ambient light
+
+Online resources
 
 https://www.researchgate.net/publication/226410924_Spherical_Parameterization_of_Marching_Cubes_IsoSurfaces_Based_upon_Nearest_Neighbor_Coordinates
 
