@@ -1,6 +1,5 @@
 use tobj;
 use itertools::Itertools;
-use num::Num;
 use std::fmt::Debug;
 use glm::Scalar;
 
@@ -459,6 +458,33 @@ impl Mesh {
             indices,
             index_count: index_count as i32,
         }
+    }
+}
+
+use noise::Fbm;
+use noise::utils::SphereMapBuilder;
+use noise::{NoiseFn, Perlin};
+
+// TODO: Better integrate as a Planet struct with set parameters, function can 
+// TODO  be reused as computed bounding box.
+
+// TODO: Calculate gradient to correct normals
+
+// TODO: Interpolated height colours (noise-rs probably has it already)
+pub fn displace_vertices(mesh: &mut Mesh, size: f64, height: f32, offset: f32) {
+    let perlin = Perlin::new();
+    // let fbm = Fbm::new();
+    // let b = SphereMapBuilder::new(&fbm).set
+    for i in 0..(mesh.vertices.len() / 3) {
+        
+        let val = perlin.get([
+            mesh.vertices[i*3 + 0] as f64 * size, 
+            mesh.vertices[i*3 + 1] as f64 * size,
+            mesh.vertices[i*3 + 2] as f64 * size,
+        ]) as f32 * height + offset;
+        mesh.vertices[i*3 + 0] *= 1.0 + val;
+        mesh.vertices[i*3 + 1] *= 1.0 + val;
+        mesh.vertices[i*3 + 2] *= 1.0 + val;
     }
 }
 
