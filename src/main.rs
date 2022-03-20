@@ -25,6 +25,8 @@ use glutin::event_loop::ControlFlow;
 const SCREEN_W: u32 = 800;
 const SCREEN_H: u32 = 600;
 
+const polymodes: [u32;3] = [gl::FILL, gl::POINT, gl::LINE];
+
 
 struct VAOobj {
     vao: u32,   /* Vertex Array Object */
@@ -228,6 +230,7 @@ fn main() {
         //---------------------------------------------------------------------/
         let conf = util::Config::load();
         // println!("{:?}", conf);
+        let mut polymode = 0;
 
         //---------------------------------------------------------------------/
         // Camera setup (available for keypress handler)
@@ -287,11 +290,69 @@ fn main() {
         let mut skybox_node = SceneNode::from_vao(skybox_vao.vao, skybox_vao.n);
         skybox_node.node_type = SceneNodeType::Skybox;
 
-        let plane_mesh = mesh::Mesh::plane(glm::vec3(2.0, 2.0, 2.0), 8, true);
-        let plane_vao = unsafe { mkvao(&plane_mesh) };
-        let mut plane_node = SceneNode::from_vao(plane_vao.vao, plane_vao.n);
-        plane_node.position.y -= 1.0;
+
+
+        let mut cubesphere = SceneNode::with_type(SceneNodeType::Empty);
+
+        // Top
+        let plane0_mesh = mesh::Mesh::plane(
+            glm::vec3(0.5, 0.5, 0.5), 
+            glm::vec3(0.0, 0.0, 0.0),
+            glm::vec3(0.0, 1.0, 0.0),
+            64, true);
+        let plane0_vao = unsafe { mkvao(&plane0_mesh) };
+        let mut plane0_node = SceneNode::from_vao(plane0_vao.vao, plane0_vao.n);
+        // Bottom
+        let plane1_mesh = mesh::Mesh::plane(
+            glm::vec3(0.5, 0.5, 0.5), 
+            glm::vec3(std::f32::consts::PI, 0.0, 0.0),
+            glm::vec3(0.0, -1.0, 0.0),
+            64, true);
+        let plane1_vao = unsafe { mkvao(&plane1_mesh) };
+        let mut plane1_node = SceneNode::from_vao(plane1_vao.vao, plane1_vao.n);
+        // Front
+        let plane2_mesh = mesh::Mesh::plane(
+            glm::vec3(0.5, 0.5, 0.5), 
+            glm::vec3(std::f32::consts::FRAC_PI_2, 0.0, 0.0),
+            glm::vec3(0.0, 0.0, 1.0),
+            64, true);
+        let plane2_vao = unsafe { mkvao(&plane2_mesh) };
+        let mut plane2_node = SceneNode::from_vao(plane2_vao.vao, plane2_vao.n);
+        // Back
+        let plane3_mesh = mesh::Mesh::plane(
+            glm::vec3(0.5, 0.5, 0.5), 
+            glm::vec3(-std::f32::consts::FRAC_PI_2, 0.0, 0.0),
+            glm::vec3(0.0, 0.0, -1.0),
+            64, true);
+        let plane3_vao = unsafe { mkvao(&plane3_mesh) };
+        let mut plane3_node = SceneNode::from_vao(plane3_vao.vao, plane3_vao.n);
+        // Left
+        let plane4_mesh = mesh::Mesh::plane(
+            glm::vec3(0.5, 0.5, 0.5), 
+            glm::vec3(0.0, 0.0, -std::f32::consts::FRAC_PI_2),
+            glm::vec3(1.0, 0.0, 0.0),
+            64, true);
+        let plane4_vao = unsafe { mkvao(&plane4_mesh) };
+        let mut plane4_node = SceneNode::from_vao(plane4_vao.vao, plane4_vao.n);
+        // Right
+        let plane5_mesh = mesh::Mesh::plane(
+            glm::vec3(0.5, 0.5, 0.5), 
+            glm::vec3(0.0, 0.0, std::f32::consts::FRAC_PI_2),
+            glm::vec3(-1.0, 0.0, 0.0),
+            64, true);
+        let plane5_vao = unsafe { mkvao(&plane5_mesh) };
+        let mut plane5_node = SceneNode::from_vao(plane5_vao.vao, plane5_vao.n);
         
+        cubesphere.add_child(&plane0_node);
+        cubesphere.add_child(&plane1_node);
+        cubesphere.add_child(&plane2_node);
+        cubesphere.add_child(&plane3_node);
+        cubesphere.add_child(&plane4_node);
+        cubesphere.add_child(&plane5_node);
+
+        // let part_plane = mesh::Mesh::cs_part_plane(glm::vec3(-1.0, 0.0, 1.0), glm::vec3(1.0, 0.0, -1.0), 64, true);
+        // let pplane_vao = unsafe { mkvao(&part_plane) };
+        // let mut pplane_node = SceneNode::from_vao(pplane_vao.vao, pplane_vao.n);
 
         // let my_text = mesh::Mesh::text_buffer("0123456789", 49.0 / 29.0, 2.0);
         // println!("text texture coordinates: {:?}", my_text.texture_coordinates);
@@ -330,7 +391,8 @@ fn main() {
         scene_root.add_child(&cube_node);
         //scene_root.add_child(&skybox_node);
         // scene_root.add_child(&text_node);
-        scene_root.add_child(&plane_node);
+        scene_root.add_child(&cubesphere);
+        // scene_root.add_child(&plane0_node);
 
         unsafe { scene_root.update_node_transformations(&glm::identity()); }
 
@@ -427,6 +489,9 @@ fn main() {
                             // heli_body_nodes[n_helis].position -= glm::vec3(0.0, 1.0, 0.0) * delta_time * movement_speed;
                             position -= glm::vec3(0.0, 1.0, 0.0) * delta_time * movement_speed;
                         },
+                        VirtualKeyCode::M => {
+                            polymode = (polymode + 1) % 3;
+                        }
                         _ => { }
                     }
                 }
@@ -462,7 +527,7 @@ fn main() {
                 gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
 
                 /* Draw scene graph */
-                gl::PolygonMode(gl::FRONT_AND_BACK, gl::LINE);
+                gl::PolygonMode(gl::FRONT_AND_BACK, polymodes[polymode]);
                 scene_root.update_node_transformations(&glm::identity());
                 scene_root.draw_scene(&perspective_view, &sh);
             }
