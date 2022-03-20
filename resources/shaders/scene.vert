@@ -19,5 +19,5 @@ void main()
     v_color = color;
     v_uv = uv;
     v_normal = normalize(mat3(u_model) * normal);
-    gl_Position = u_mvp * vec4(position, 1.0f);
+    gl_Position = u_mvp * vec4(v_position, 1.0f);
 }
