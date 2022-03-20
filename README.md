@@ -21,6 +21,7 @@ This brainstorming has left me with more ideas than I believe I'll be able to im
 Keywords:
 * Level of Detail techniques
 * Types of sphere: UV, normalized, spherified cube, spherified pyramid, fibonacci, icosphere
+* Merging VAOs to save draw calls? Subdividing a cube potentially creates many meshes to draw
 * Terrain: Cube marching, or noise texture mapped to sphere
 * Optionally extend to a little solar system
 * Collision detection to allow for a player to land on the planet
@@ -40,7 +41,7 @@ Multi-dimensional https://www.sciencedirect.com/science/article/pii/S00219991130
 
 Icosphere: http://blog.andreaskahler.com/2009/06/creating-icosphere-mesh-in-code.html
 
-Cubesphere: https://catlikecoding.com/unity/tutorials/cube-sphere/
+Cubesphere, source for math: https://catlikecoding.com/unity/tutorials/cube-sphere/
 
 
 ## Timeline
