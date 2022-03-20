@@ -258,7 +258,8 @@ impl Mesh {
         scale: glm::TVec3<f32>, 
         rotation: glm::TVec3<f32>,
         position: glm::TVec3<f32>,
-        subdivisions: usize, tiling_textures: bool
+        subdivisions: usize, tiling_textures: bool,
+        color: Option<glm::TVec4<f32>>
     ) -> Self {
         let res = 1 + subdivisions;
         let vertex_count = res * res;
@@ -331,42 +332,36 @@ impl Mesh {
         scale: glm::TVec3<f32>,
         rotation: glm::TVec3<f32>,
         position: glm::TVec3<f32>, 
-        subdivisions: usize, tiling_textures: bool
+        subdivisions: usize, tiling_textures: bool,
+        color: Option<glm::TVec4<f32>>
     ) -> Self {
         let res = 1 + subdivisions;
         let vertex_count = res * res;
         let index_count = 6 * (res-1) * (res-1);
         let mut vertices = vec![glm::vec3(0.0, 0.0, 0.0); vertex_count];
-        let normals = vec![glm::vec3(0.0, 1.0, 0.0); vertex_count];
+        let mut normals = vec![glm::vec3(0.0, 1.0, 0.0); vertex_count];
         let mut texture = vec![glm::vec2(0.0, 0.0); vertex_count];
         let mut indices = vec![0; index_count];
 
         for z in 0..res {
             for x in 0..res {
-                // TODO: Rotate/translate point
-                // let pos = glm::rotate_vec3(glm::vec3(
-                //     2.0 * x as f32 / res as f32 - 1.0,
-                //     0.0,
-                //     2.0 * z as f32 / res as f32 - 1.0,
-                // ).component_mul(&scale) * 0.5, 0.0, glm::vec3(1.0, 0.0, 0.0));
-                let posx = 2.0 * x as f32 / res as f32 - 1.0;
-                let posy = 1.0f32;
-                let posz = 2.0 * z as f32 / res as f32 - 1.0;
+                // Transform position
+                let mut pos = glm::vec3(
+                    2.0 * x as f32 / subdivisions as f32 - 1.0,
+                    0.0f32,
+                    2.0 * z as f32 / subdivisions as f32 - 1.0,
+                );
+                pos = glm::rotate_x_vec3(&pos, rotation.x);
+                pos = glm::rotate_y_vec3(&pos, rotation.y);
+                pos = glm::rotate_z_vec3(&pos, rotation.z);
+                pos += position;
                 // Side of cubesphere
-                vertices[z * res + x] = glm::vec3(
-                    posx * (1.0 - posy.powi(2) / 2.0 - posz.powi(2) / 2.0 + posy.powi(2) * posz.powi(2) / 3.0).sqrt(),
-                    posy * (1.0 - posx.powi(2) / 2.0 - posz.powi(2) / 2.0 + posx.powi(2) * posz.powi(2) / 3.0).sqrt(),
-                    posz * (1.0 - posx.powi(2) / 2.0 - posy.powi(2) / 2.0 + posx.powi(2) * posy.powi(2) / 3.0).sqrt(),
+                pos = glm::vec3(
+                    pos.x * (1.0 - pos.y.powi(2) / 2.0 - pos.z.powi(2) / 2.0 + pos.y.powi(2) * pos.z.powi(2) / 3.0).sqrt(),
+                    pos.y * (1.0 - pos.x.powi(2) / 2.0 - pos.z.powi(2) / 2.0 + pos.x.powi(2) * pos.z.powi(2) / 3.0).sqrt(),
+                    pos.z * (1.0 - pos.x.powi(2) / 2.0 - pos.y.powi(2) / 2.0 + pos.x.powi(2) * pos.y.powi(2) / 3.0).sqrt(),
                 ).component_mul(&scale) * 0.5;
-                if z == 0 && x == 0 {
-                    println!("0,0: {:?}", vertices[z * res + x]);
-                }
-                // Flat plane
-                // vertices[z * res + x] = glm::vec3(
-                //     2.0 * x as f32 / res as f32 - 1.0,
-                //     0.0,
-                //     2.0 * z as f32 / res as f32 - 1.0,
-                // ).component_mul(&scale) * 0.5;
+                vertices[z * res + x] = pos;
                 // Waves
                 // vertices[y * res + x] = glm::vec3(
                 //     2.0 * x as f32 / res as f32 - 1.0,
@@ -374,9 +369,12 @@ impl Mesh {
                 //     2.0 * y as f32 / res as f32 - 1.0,
                 // ).component_mul(&scale) * 0.5;
                 texture[z * res + x] = glm::vec2(
-                    x as f32 / res as f32,
-                    z as f32 / res as f32,
+                    ((pos.x + pos.z).atan() + 1.0) / 2.0,
+                    ((pos.y / pos.x).atan() + 1.0) / 2.0,
                 );
+                // Normal is just the position normalized for now
+                normals[z * res + x] = glm::normalize(&vertices[z * res + x]);
+
                 if z < subdivisions && x < subdivisions {
                     let offset = 6 * (z * subdivisions + x);
                     indices[offset + 0] = (z * res + x + 1) as u32;
@@ -394,7 +392,7 @@ impl Mesh {
             vertices: from_array_of_vec3(vertices),
             normals: from_array_of_vec3(normals),
             texture_coordinates: from_array_of_vec2(texture),
-            colors: generate_color_vec(glm::vec4(1.0, 1.0, 1.0, 1.0), vertex_count),
+            colors: generate_color_vec(color.unwrap_or(glm::vec4(1.0, 1.0, 1.0, 1.0)), vertex_count),
             indices,
             index_count: index_count as i32,
         }

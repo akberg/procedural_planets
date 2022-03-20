@@ -291,57 +291,81 @@ fn main() {
         skybox_node.node_type = SceneNodeType::Skybox;
 
 
+        // TODO: Make this more elegant:
 
         let mut cubesphere = SceneNode::with_type(SceneNodeType::Empty);
 
         // Top
-        let plane0_mesh = mesh::Mesh::plane(
+        let plane0_mesh = mesh::Mesh::cs_plane(
             glm::vec3(0.5, 0.5, 0.5), 
             glm::vec3(0.0, 0.0, 0.0),
             glm::vec3(0.0, 1.0, 0.0),
-            64, true);
+            64, true,
+            Some(glm::vec4(0.8, 0.2, 0.4, 1.0))
+        );
         let plane0_vao = unsafe { mkvao(&plane0_mesh) };
         let mut plane0_node = SceneNode::from_vao(plane0_vao.vao, plane0_vao.n);
         // Bottom
-        let plane1_mesh = mesh::Mesh::plane(
+        let plane1_mesh = mesh::Mesh::cs_plane(
             glm::vec3(0.5, 0.5, 0.5), 
             glm::vec3(std::f32::consts::PI, 0.0, 0.0),
             glm::vec3(0.0, -1.0, 0.0),
-            64, true);
+            64, true,
+            Some(glm::vec4(0.8, 0.2, 0.4, 1.0))
+        );
         let plane1_vao = unsafe { mkvao(&plane1_mesh) };
         let mut plane1_node = SceneNode::from_vao(plane1_vao.vao, plane1_vao.n);
         // Front
-        let plane2_mesh = mesh::Mesh::plane(
+        let plane2_mesh = mesh::Mesh::cs_plane(
             glm::vec3(0.5, 0.5, 0.5), 
             glm::vec3(std::f32::consts::FRAC_PI_2, 0.0, 0.0),
             glm::vec3(0.0, 0.0, 1.0),
-            64, true);
+            64, true,
+            Some(glm::vec4(0.8, 0.2, 0.4, 1.0))
+        );
         let plane2_vao = unsafe { mkvao(&plane2_mesh) };
         let mut plane2_node = SceneNode::from_vao(plane2_vao.vao, plane2_vao.n);
         // Back
-        let plane3_mesh = mesh::Mesh::plane(
+        let plane3_mesh = mesh::Mesh::cs_plane(
             glm::vec3(0.5, 0.5, 0.5), 
             glm::vec3(-std::f32::consts::FRAC_PI_2, 0.0, 0.0),
             glm::vec3(0.0, 0.0, -1.0),
-            64, true);
+            64, true,
+            Some(glm::vec4(0.8, 0.2, 0.4, 1.0))
+        );
         let plane3_vao = unsafe { mkvao(&plane3_mesh) };
         let mut plane3_node = SceneNode::from_vao(plane3_vao.vao, plane3_vao.n);
         // Left
-        let plane4_mesh = mesh::Mesh::plane(
+        let plane4_mesh = mesh::Mesh::cs_plane(
             glm::vec3(0.5, 0.5, 0.5), 
             glm::vec3(0.0, 0.0, -std::f32::consts::FRAC_PI_2),
             glm::vec3(1.0, 0.0, 0.0),
-            64, true);
+            64, true,
+            Some(glm::vec4(0.8, 0.2, 0.4, 1.0))
+        );
         let plane4_vao = unsafe { mkvao(&plane4_mesh) };
         let mut plane4_node = SceneNode::from_vao(plane4_vao.vao, plane4_vao.n);
         // Right
-        let plane5_mesh = mesh::Mesh::plane(
+        let plane5_mesh = mesh::Mesh::cs_plane(
             glm::vec3(0.5, 0.5, 0.5), 
             glm::vec3(0.0, 0.0, std::f32::consts::FRAC_PI_2),
             glm::vec3(-1.0, 0.0, 0.0),
-            64, true);
+            64, true,
+            Some(glm::vec4(0.8, 0.2, 0.4, 1.0))
+        );
         let plane5_vao = unsafe { mkvao(&plane5_mesh) };
         let mut plane5_node = SceneNode::from_vao(plane5_vao.vao, plane5_vao.n);
+        // let mut plane5_node = SceneNode::with_type(SceneNodeType::Empty);
+        // let plane50_mesh = mesh::Mesh::cs_plane(
+        //     glm::vec3(0.25, 0.25, 0.25), 
+        //     glm::vec3(0.0, 0.0, std::f32::consts::FRAC_PI_2),
+        //     glm::vec3(-1.0, -0.5, -0.5),
+        //     16, true,
+        //     Some(glm::vec4(0.8, 0.2, 0.4, 1.0))
+        // );
+        // let plane50_vao = unsafe { mkvao(&plane50_mesh) };
+        // let mut plane50_node = SceneNode::from_vao(plane50_vao.vao, plane50_vao.n);
+        // plane5_node.add_child(&plane50_node);
         
         cubesphere.add_child(&plane0_node);
         cubesphere.add_child(&plane1_node);
@@ -388,7 +412,7 @@ fn main() {
         // Make Scene graph
         //---------------------------------------------------------------------/
         let mut scene_root = SceneNode::new();
-        scene_root.add_child(&cube_node);
+        // scene_root.add_child(&cube_node);
         //scene_root.add_child(&skybox_node);
         // scene_root.add_child(&text_node);
         scene_root.add_child(&cubesphere);
