@@ -321,7 +321,7 @@ impl Mesh {
             vertices: from_array_of_vec3(vertices),
             normals: from_array_of_vec3(normals),
             texture_coordinates: from_array_of_vec2(texture),
-            colors: generate_color_vec(glm::vec4(1.0, 1.0, 1.0, 1.0), vertex_count),
+            colors: generate_color_vec(color.unwrap_or(glm::vec4(1.0, 1.0, 1.0, 1.0)), vertex_count),
             indices,
             index_count: index_count as i32,
         }
