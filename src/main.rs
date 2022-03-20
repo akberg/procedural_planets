@@ -3,6 +3,8 @@ use std::{ mem, ptr, os::raw::c_void };
 use std::thread;
 use std::sync::{Mutex, Arc, RwLock};
 
+use std::collections::HashMap;
+
 mod shader;
 mod util;
 mod mesh;
@@ -25,7 +27,7 @@ use glutin::event_loop::ControlFlow;
 const SCREEN_W: u32 = 800;
 const SCREEN_H: u32 = 600;
 
-const polymodes: [u32;3] = [gl::FILL, gl::POINT, gl::LINE];
+const POLYMODES: [u32;3] = [gl::FILL, gl::POINT, gl::LINE];
 
 
 struct VAOobj {
@@ -466,6 +468,9 @@ fn main() {
 
         let first_frame_time = std::time::Instant::now();
         let mut last_frame_time = first_frame_time;
+
+        // Input
+        let mut key_debounce: HashMap<VirtualKeyCode, u32> = HashMap::new();
         // The main rendering loop
         loop {
             let now = std::time::Instant::now();
@@ -473,6 +478,7 @@ fn main() {
             let delta_time = now.duration_since(last_frame_time).as_secs_f32();
             last_frame_time = now;
 
+            key_debounce.iter_mut().for_each(|(_, v)| if *v > 0 { *v -= 1; });
 
             //-----------------------------------------------------------------/
             // Handle keyboard input
@@ -484,7 +490,7 @@ fn main() {
                     // let heli_direction = util::vec_direction(heli_body_nodes[n_helis].rotation.y, 0.0);
                     // let flat_direction = -heli_direction; //glm::normalize(&glm::vec3(heli_direction.x, 0.0, heli_direction.z));
                     // right = glm::cross(&flat_direction, &glm::vec3(0.0, 1.0, 0.0));
-                    
+
                     match key {
                         /* Move left/right */
                         VirtualKeyCode::A => {
@@ -504,13 +510,13 @@ fn main() {
                             // heli_body_nodes[n_helis].rotation.x = -0.2;
                             // tilt_dir.0 = -1;
                             // heli_body_nodes[n_helis].position += flat_direction * delta_time * movement_speed;
-                            position += flat_direction * delta_time * movement_speed;
+                            position += direction * delta_time * movement_speed;
                         },
                         VirtualKeyCode::S => {
                             // heli_body_nodes[n_helis].rotation.x = 0.2;
                             // tilt_dir.0 = 1;
                             // heli_body_nodes[n_helis].position -= flat_direction * delta_time * movement_speed;
-                            position -= flat_direction * delta_time * movement_speed;
+                            position -= direction * delta_time * movement_speed;
                         },
                         /* Move up/down */
                         VirtualKeyCode::Space => {
@@ -522,7 +528,11 @@ fn main() {
                             position -= glm::vec3(0.0, 1.0, 0.0) * delta_time * movement_speed;
                         },
                         VirtualKeyCode::M => {
-                            polymode = (polymode + 1) % 3;
+                            let v = key_debounce.entry(VirtualKeyCode::M).or_insert(0);
+                            if *v == 0 {
+                                polymode = (polymode + 1) % 3;
+                                *v = 10;
+                            }
                         }
                         _ => { }
                     }
@@ -559,7 +569,7 @@ fn main() {
                 gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
 
                 /* Draw scene graph */
-                gl::PolygonMode(gl::FRONT_AND_BACK, polymodes[polymode]);
+                gl::PolygonMode(gl::FRONT_AND_BACK, POLYMODES[polymode]);
                 scene_root.update_node_transformations(&glm::identity());
                 scene_root.draw_scene(&perspective_view, &sh);
             }
