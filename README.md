@@ -5,6 +5,7 @@
 ![Generate a cubesphere, vertices should be quite evenly distributed](report/images/cubesphere-wf.png)
 ![Added noise to displace the vertices](report/images/cubesphere-w-vertex-noise.png)
 ![Computed normals, but struggling with seams](report/images/cubesphere-w-noise-normal-seam.png)
+![Apply noise and add an additional sphere as an ocean](report/images/red-planet-w-ocean.png)
 
 ## Project description: Procedurally generated planet
 
@@ -19,7 +20,7 @@ I have a few spaceship 3D models from the last time I took the effort to try lea
 This brainstorming has left me with more ideas than I believe I'll be able to implement, but I really have no clue how difficult some of these things will be. So here's a somewhat prioritized checklist of subgoals. A realistic aim given the current workload in other courses and activities is probably just to reach the main goal.
 
 - [ ] Main goal: Procedurally generate a planet with a satisfying level of detail on its terrain, with a corresponding texture and light from a sunlight source, and have a controllable camera to fly around and explore it.
-- [ ] Allow the planet to have an ocean.
+- [ ] Allow the planet to have an ocean. Additional sphere with lower poly count.
 - [ ] Generate several planets and place them in a solar system.
 - [ ] Detect collision with the ground, so the player can land.
 - [ ] Adding an atmosphere that modifies the sunlight.
