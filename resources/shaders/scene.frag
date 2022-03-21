@@ -152,11 +152,11 @@ vec4 planet_shader()
 
     // Use texture colours 
     //color = vec4(v_color.rgb * max(0, dot(v_normal, -light)), v_color.a);
-    //color = vec4(ambient_color + diffuse * diffuse_color + specular * specular_color, 1.0);
+    color = vec4(ambient_color + diffuse * diffuse_color + specular * specular_color, 1.0);
     // Colour using normals
     float minr = 0.6;
     float radius = 0.9-minr;
-    color = vec4(vec3((normalize(v_position) + 1.0) / 2.0) * (length(v_position)-minr) / radius, 1.0);
+    //color = vec4(vec3((normalize(v_position) + 1.0) / 2.0) * (length(v_position)-minr) / radius, 1.0);
     //color = vec4(vec2(noise3d(v_normal, 10.0)), 1.0, 1.0);
     return color;
 }

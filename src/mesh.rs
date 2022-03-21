@@ -397,7 +397,7 @@ impl Mesh {
         }
     }
 
-    /// Generate a plane projected to a cubesphere from corner start to corner stop
+    /// (Not working) Generate a plane projected to a cubesphere from corner start to corner stop
     /// * start and stop are points on the surface of the surrounding cube, meaning
     /// one of their components should be equal
     pub fn cs_part_plane(
@@ -468,8 +468,6 @@ use noise::{NoiseFn, Perlin};
 // TODO: Better integrate as a Planet struct with set parameters, function can 
 // TODO  be reused as computed bounding box.
 
-// TODO: Calculate gradient to correct normals
-
 // TODO: Interpolated height colours (noise-rs probably has it already)
 pub fn displace_vertices(mesh: &mut Mesh, size: f64, height: f32, offset: f32) {
     let perlin = Perlin::new();
@@ -486,6 +484,20 @@ pub fn displace_vertices(mesh: &mut Mesh, size: f64, height: f32, offset: f32) {
         mesh.vertices[i*3 + 1] *= 1.0 + val;
         mesh.vertices[i*3 + 2] *= 1.0 + val;
     }
+
+    // TODO: Solve the seams, could reuse the noise generator and use polar coordinates
+    let vertices = to_array_of_vec3(mesh.vertices.clone());
+    let mut normals = to_array_of_vec3(mesh.normals.clone());
+    for i in (0..mesh.index_count).step_by(3) {
+        let i = i as usize;
+        let v1 = vertices[mesh.indices[i + 1] as usize] - vertices[mesh.indices[i] as usize];
+        let v2 = vertices[mesh.indices[i + 2] as usize] - vertices[mesh.indices[i] as usize];
+        let norm = glm::normalize(&glm::cross(&v1, &v2));
+        normals[mesh.indices[i] as usize] = norm;
+        normals[mesh.indices[i + 1] as usize] = norm;
+        normals[mesh.indices[i + 2] as usize] = norm;
+    }
+    mesh.normals = from_array_of_vec3(normals);
 }
 
 // pub struct Terrain;
