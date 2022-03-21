@@ -4,6 +4,7 @@
 
 ![Generate a cubesphere, vertices should be quite evenly distributed](report/images/cubesphere-wf.png)
 ![Added noise to displace the vertices](report/images/cubesphere-w-vertex-noise.png)
+![Computed normals, but struggling with seams](report/images/cubesphere-w-noise-normal-seam.png)
 
 ## Project description: Procedurally generated planet
 
