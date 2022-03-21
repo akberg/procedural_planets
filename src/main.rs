@@ -29,25 +29,31 @@ const SCREEN_H: u32 = 600;
 
 const POLYMODES: [u32;3] = [gl::FILL, gl::POINT, gl::LINE];
 
-
+#[derive(Copy, Clone, Default, Debug)]
 struct VAOobj {
-    vao: u32,   /* Vertex Array Object */
-    n: i32,     /* Number of triangles */
+    vao: u32,   // Vertex Array Object 
+    vbo: u32,   // Vertex Buffer Object
+    ibo: u32,   // Index Buffer Object
+    cbo: u32,   // Color Buffer Object
+    nbo: u32,   // Normal Buffer Object
+    texbo: u32, // Texture Buffer Object
+    n: i32,     // Number of triangles
 }
 
 
 /// Extended mkvao_simple_color to associate colors to vertices
 unsafe fn mkvao(obj: &mesh::Mesh) -> VAOobj {
+    let mut id = VAOobj { n: obj.index_count, ..Default::default() };
 
     /* Create and bind vertex array */
-    let mut vao = 0;
-    gl::GenVertexArrays(1, &mut vao);
-    gl::BindVertexArray(vao);
+    //let mut id.vao = 0;
+    gl::GenVertexArrays(1, &mut id.vao);
+    gl::BindVertexArray(id.vao);
 
     /* Create and bind index buffer, add data */
-    let mut ibo = 0;
-    gl::GenBuffers(1, &mut ibo);
-    gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, ibo);
+    //let mut ibo = 0;
+    gl::GenBuffers(1, &mut id.ibo);
+    gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, id.ibo);
 
     let ibuf_size = util::byte_size_of_array(&obj.indices);
     let ibuf_data = util::pointer_to_array(&obj.indices);
@@ -60,9 +66,9 @@ unsafe fn mkvao(obj: &mesh::Mesh) -> VAOobj {
     // Next sections are vertex attributes
 
     /* Create and bind vertex buffer, add data */
-    let mut vbo = 0;
-    gl::GenBuffers(1, &mut vbo);
-    gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
+    //let mut vbo = 0;
+    gl::GenBuffers(1, &mut id.vbo);
+    gl::BindBuffer(gl::ARRAY_BUFFER, id.vbo);
 
     let vbuf_size = util::byte_size_of_array(&obj.vertices);
     let vbuf_data = util::pointer_to_array(&obj.vertices);
@@ -79,8 +85,8 @@ unsafe fn mkvao(obj: &mesh::Mesh) -> VAOobj {
 
     /* Create and bind color buffer, add data */
     let mut cbo = 0;
-    gl::GenBuffers(1, &mut cbo);
-    gl::BindBuffer(gl::ARRAY_BUFFER, cbo);
+    gl::GenBuffers(1, &mut id.cbo);
+    gl::BindBuffer(gl::ARRAY_BUFFER, id.cbo);
 
     let cbuf_size = util::byte_size_of_array(&obj.colors);
     let cbuf_data = util::pointer_to_array(&obj.colors);
@@ -97,8 +103,8 @@ unsafe fn mkvao(obj: &mesh::Mesh) -> VAOobj {
 
     /* Add normals */
     let mut nbo = 0;
-    gl::GenBuffers(1, &mut nbo);
-    gl::BindBuffer(gl::ARRAY_BUFFER, nbo);
+    gl::GenBuffers(1, &mut id.nbo);
+    gl::BindBuffer(gl::ARRAY_BUFFER, id.nbo);
     let nbo_size = util::byte_size_of_array(&obj.normals);
     let nbo_data = util::pointer_to_array(&obj.normals);
 
@@ -114,8 +120,8 @@ unsafe fn mkvao(obj: &mesh::Mesh) -> VAOobj {
 
     /* Add texture coordinates */
     let mut texbo = 0;
-    gl::GenBuffers(1, &mut texbo);
-    gl::BindBuffer(gl::ARRAY_BUFFER, texbo);
+    gl::GenBuffers(1, &mut id.texbo);
+    gl::BindBuffer(gl::ARRAY_BUFFER, id.texbo);
     let texbo_size = util::byte_size_of_array(&obj.texture_coordinates);
     let texbo_data = util::pointer_to_array(&obj.texture_coordinates);
 
@@ -129,9 +135,8 @@ unsafe fn mkvao(obj: &mesh::Mesh) -> VAOobj {
     gl::EnableVertexAttribArray(attrib_idx);
     gl::VertexAttribPointer(attrib_idx, 2, gl::FLOAT, gl::FALSE, 0, std::ptr::null());
 
-    println!("Create vao={}, ibo={}, vbo={}, cbo={}, texbo={}", vao, ibo, vbo, cbo, texbo);
-
-    VAOobj { vao, n: obj.index_count }
+    println!("Create object {:?}", id);
+    id
 }
 unsafe fn get_texture_id(img: &image::DynamicImage) -> u32 {
     use image::GenericImageView;
@@ -296,71 +301,156 @@ fn main() {
         // TODO: Make this more elegant:
 
         let mut cubesphere = SceneNode::with_type(SceneNodeType::Empty);
+        let size = 10.0;
+        let height = 0.05;
+        let offset = 0.0;
+        let subdivisions = 256;
 
         // Top
         let mut plane0_mesh = mesh::Mesh::cs_plane(
-            glm::vec3(0.5, 0.5, 0.5), 
+            glm::vec3(1.0, 1.0, 1.0), 
             glm::vec3(0.0, 0.0, 0.0),
             glm::vec3(0.0, 1.0, 0.0),
-            64, true,
+            128, true,
             Some(glm::vec4(0.8, 0.2, 0.4, 1.0))
         );
-        mesh::displace_vertices(&mut plane0_mesh, 10.0, 0.3, 2.0);
+        mesh::displace_vertices(&mut plane0_mesh, size, height, offset);
         let plane0_vao = unsafe { mkvao(&plane0_mesh) };
         let mut plane0_node = SceneNode::from_vao(plane0_vao.vao, plane0_vao.n);
         // Bottom
         let mut plane1_mesh = mesh::Mesh::cs_plane(
-            glm::vec3(0.5, 0.5, 0.5), 
+            glm::vec3(1.0, 1.0, 1.0), 
             glm::vec3(std::f32::consts::PI, 0.0, 0.0),
             glm::vec3(0.0, -1.0, 0.0),
-            64, true,
+            128, true,
             Some(glm::vec4(0.8, 0.2, 0.4, 1.0))
         );
-        mesh::displace_vertices(&mut plane1_mesh, 10.0, 0.3, 2.0);
+        mesh::displace_vertices(&mut plane1_mesh, size, height, offset);
         let plane1_vao = unsafe { mkvao(&plane1_mesh) };
         let mut plane1_node = SceneNode::from_vao(plane1_vao.vao, plane1_vao.n);
         // Front
         let mut plane2_mesh = mesh::Mesh::cs_plane(
-            glm::vec3(0.5, 0.5, 0.5), 
+            glm::vec3(1.0, 1.0, 1.0), 
             glm::vec3(std::f32::consts::FRAC_PI_2, 0.0, 0.0),
             glm::vec3(0.0, 0.0, 1.0),
-            64, true,
+            128, true,
             Some(glm::vec4(0.8, 0.2, 0.4, 1.0))
         );
-        mesh::displace_vertices(&mut plane2_mesh, 10.0, 0.3, 2.0);
+        mesh::displace_vertices(&mut plane2_mesh, size, height, offset);
         let plane2_vao = unsafe { mkvao(&plane2_mesh) };
         let mut plane2_node = SceneNode::from_vao(plane2_vao.vao, plane2_vao.n);
         // Back
         let mut plane3_mesh = mesh::Mesh::cs_plane(
-            glm::vec3(0.5, 0.5, 0.5), 
+            glm::vec3(1.0, 1.0, 1.0), 
             glm::vec3(-std::f32::consts::FRAC_PI_2, 0.0, 0.0),
             glm::vec3(0.0, 0.0, -1.0),
-            64, true,
+            128, true,
             Some(glm::vec4(0.8, 0.2, 0.4, 1.0))
         );
-        mesh::displace_vertices(&mut plane3_mesh, 10.0, 0.3, 2.0);
+        mesh::displace_vertices(&mut plane3_mesh, size, height, offset);
         let plane3_vao = unsafe { mkvao(&plane3_mesh) };
         let mut plane3_node = SceneNode::from_vao(plane3_vao.vao, plane3_vao.n);
         // Left
         let mut plane4_mesh = mesh::Mesh::cs_plane(
-            glm::vec3(0.5, 0.5, 0.5), 
+            glm::vec3(1.0, 1.0, 1.0), 
             glm::vec3(0.0, 0.0, -std::f32::consts::FRAC_PI_2),
             glm::vec3(1.0, 0.0, 0.0),
-            64, true,
+            128, true,
             Some(glm::vec4(0.8, 0.2, 0.4, 1.0))
         );
-        mesh::displace_vertices(&mut plane4_mesh, 10.0, 0.3, 2.0);
+        mesh::displace_vertices(&mut plane4_mesh, size, height, offset);
         let plane4_vao = unsafe { mkvao(&plane4_mesh) };
         let mut plane4_node = SceneNode::from_vao(plane4_vao.vao, plane4_vao.n);
         // Right
         let mut plane5_mesh = mesh::Mesh::cs_plane(
-            glm::vec3(0.5, 0.5, 0.5), 
+            glm::vec3(1.0, 1.0, 1.0), 
             glm::vec3(0.0, 0.0, std::f32::consts::FRAC_PI_2),
             glm::vec3(-1.0, 0.0, 0.0),
-            64, true,
+            128, true,
             Some(glm::vec4(0.8, 0.2, 0.4, 1.0))
         );
-        mesh::displace_vertices(&mut plane5_mesh, 10.0, 0.3, 2.0);
+        mesh::displace_vertices(&mut plane5_mesh, size, height, offset);
+        let plane5_vao = unsafe { mkvao(&plane5_mesh) };
+        let mut plane5_node = SceneNode::from_vao(plane5_vao.vao, plane5_vao.n);
+                
+        cubesphere.add_child(&plane0_node);
+        cubesphere.add_child(&plane1_node);
+        cubesphere.add_child(&plane2_node);
+        cubesphere.add_child(&plane3_node);
+        cubesphere.add_child(&plane4_node);
+        cubesphere.add_child(&plane5_node);
+
+        let mut cs_ocean = SceneNode::with_type(SceneNodeType::Empty);
+        let size = 10.0;
+        let height = 0.05;
+        let offset = 0.0;
+        let subdivisions = 32;
+        let color = glm::vec4(0.1, 0.3, 0.8, 0.8);
+
+        // Top
+        let mut plane0_mesh = mesh::Mesh::cs_plane(
+            glm::vec3(1.0, 1.0, 1.0), 
+            glm::vec3(0.0, 0.0, 0.0),
+            glm::vec3(0.0, 1.0, 0.0),
+            128, true,
+            Some(color)
+        );
+        // mesh::displace_vertices(&mut plane0_mesh, size, height, offset);
+        let plane0_vao = unsafe { mkvao(&plane0_mesh) };
+        let mut plane0_node = SceneNode::from_vao(plane0_vao.vao, plane0_vao.n);
+        // Bottom
+        let mut plane1_mesh = mesh::Mesh::cs_plane(
+            glm::vec3(1.0, 1.0, 1.0), 
+            glm::vec3(std::f32::consts::PI, 0.0, 0.0),
+            glm::vec3(0.0, -1.0, 0.0),
+            128, true,
+            Some(color)
+        );
+        // mesh::displace_vertices(&mut plane1_mesh, size, height, offset);
+        let plane1_vao = unsafe { mkvao(&plane1_mesh) };
+        let mut plane1_node = SceneNode::from_vao(plane1_vao.vao, plane1_vao.n);
+        // Front
+        let mut plane2_mesh = mesh::Mesh::cs_plane(
+            glm::vec3(1.0, 1.0, 1.0), 
+            glm::vec3(std::f32::consts::FRAC_PI_2, 0.0, 0.0),
+            glm::vec3(0.0, 0.0, 1.0),
+            128, true,
+            Some(color)
+        );
+        // mesh::displace_vertices(&mut plane2_mesh, size, height, offset);
+        let plane2_vao = unsafe { mkvao(&plane2_mesh) };
+        let mut plane2_node = SceneNode::from_vao(plane2_vao.vao, plane2_vao.n);
+        // Back
+        let mut plane3_mesh = mesh::Mesh::cs_plane(
+            glm::vec3(1.0, 1.0, 1.0), 
+            glm::vec3(-std::f32::consts::FRAC_PI_2, 0.0, 0.0),
+            glm::vec3(0.0, 0.0, -1.0),
+            128, true,
+            Some(color)
+        );
+        // mesh::displace_vertices(&mut plane3_mesh, size, height, offset);
+        let plane3_vao = unsafe { mkvao(&plane3_mesh) };
+        let mut plane3_node = SceneNode::from_vao(plane3_vao.vao, plane3_vao.n);
+        // Left
+        let mut plane4_mesh = mesh::Mesh::cs_plane(
+            glm::vec3(1.0, 1.0, 1.0), 
+            glm::vec3(0.0, 0.0, -std::f32::consts::FRAC_PI_2),
+            glm::vec3(1.0, 0.0, 0.0),
+            128, true,
+            Some(color)
+        );
+        // mesh::displace_vertices(&mut plane4_mesh, size, height, offset);
+        let plane4_vao = unsafe { mkvao(&plane4_mesh) };
+        let mut plane4_node = SceneNode::from_vao(plane4_vao.vao, plane4_vao.n);
+        // Right
+        let mut plane5_mesh = mesh::Mesh::cs_plane(
+            glm::vec3(1.0, 1.0, 1.0), 
+            glm::vec3(0.0, 0.0, std::f32::consts::FRAC_PI_2),
+            glm::vec3(-1.0, 0.0, 0.0),
+            128, true,
+            Some(color)
+        );
+        // mesh::displace_vertices(&mut plane5_mesh, size, height, offset);
         let plane5_vao = unsafe { mkvao(&plane5_mesh) };
         let mut plane5_node = SceneNode::from_vao(plane5_vao.vao, plane5_vao.n);
 
@@ -376,13 +466,15 @@ fn main() {
         // let plane50_vao = unsafe { mkvao(&plane50_mesh) };
         // let mut plane50_node = SceneNode::from_vao(plane50_vao.vao, plane50_vao.n);
         // plane5_node.add_child(&plane50_node);
-        
-        cubesphere.add_child(&plane0_node);
-        cubesphere.add_child(&plane1_node);
-        cubesphere.add_child(&plane2_node);
-        cubesphere.add_child(&plane3_node);
-        cubesphere.add_child(&plane4_node);
-        cubesphere.add_child(&plane5_node);
+
+
+        cs_ocean.add_child(&plane0_node);
+        cs_ocean.add_child(&plane1_node);
+        cs_ocean.add_child(&plane2_node);
+        cs_ocean.add_child(&plane3_node);
+        cs_ocean.add_child(&plane4_node);
+        cs_ocean.add_child(&plane5_node);
+        cs_ocean.scale *= 1.001;
 
         // let part_plane = mesh::Mesh::cs_part_plane(glm::vec3(-1.0, 0.0, 1.0), glm::vec3(1.0, 0.0, -1.0), 64, true);
         // let pplane_vao = unsafe { mkvao(&part_plane) };
@@ -426,6 +518,7 @@ fn main() {
         //scene_root.add_child(&skybox_node);
         // scene_root.add_child(&text_node);
         scene_root.add_child(&cubesphere);
+        scene_root.add_child(&cs_ocean);
         // scene_root.add_child(&plane0_node);
 
         unsafe { scene_root.update_node_transformations(&glm::identity()); }
