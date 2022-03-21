@@ -242,6 +242,11 @@ impl SceneNode {
             (&*child).draw_scene(view_projection_matrix, sh);
         }
     }
+
+    pub unsafe fn update_vertex_buffer(&self) {
+        gl::BindVertexArray(self.vao_id);
+        // TODO: Implement
+    }
 }
 
 
