@@ -8,6 +8,11 @@ fn generate_color_vec(color: glm::TVec4<f32>, num: usize) -> Vec<f32> {
     glm::value_ptr(&color).iter().cloned().cycle().take(num*4).collect()
     //color.iter().cloned().cycle().take(num*4).collect()
 }
+/// Smooth min
+fn smin(a: f32, b: f32, k: f32) -> f32 {
+    let h = 0.0f32.max(k - (a-b).abs()) / k;
+    return a.min(b) - h.powi(3) * k / 6.0;
+}
 /// Convert an array of Vec2 into an array of numbers
 pub fn from_array_of_vec2<T: Scalar + Copy>(arr: Vec<glm::TVec2<T>>) -> Vec<T> {
     arr.iter()
@@ -465,28 +470,47 @@ use noise::Fbm;
 use noise::utils::SphereMapBuilder;
 use noise::{NoiseFn, Perlin};
 
+fn fractal_noise(generator: Perlin, point: &glm::TVec3<f32>, size: f64, height: f32, offset: f32) -> f32 {
+    let mut noise_sum = 0.0;
+    let mut amp = 1.0;
+    let mut freq = 1.0;
+
+    for _ in 0..5 {
+        let point = point * freq;
+        noise_sum += generator.get([
+            point.x as f64 * size,
+            point.y as f64 * size,
+            point.z as f64 * size,
+        ]) as f32 * amp * height;
+        freq *= 2.0;
+        amp *= 0.5;
+    }
+    noise_sum
+}
+
 // TODO: Better integrate as a Planet struct with set parameters, function can 
 // TODO  be reused as computed bounding box.
 
 // TODO: Interpolated height colours (noise-rs probably has it already)
 pub fn displace_vertices(mesh: &mut Mesh, size: f64, height: f32, offset: f32) {
+    let mut vertices = to_array_of_vec3(mesh.vertices.clone());
     let perlin = Perlin::new();
     // let fbm = Fbm::new();
     // let b = SphereMapBuilder::new(&fbm).set
-    for i in 0..(mesh.vertices.len() / 3) {
-        
-        let val = perlin.get([
-            mesh.vertices[i*3 + 0] as f64 * size, 
-            mesh.vertices[i*3 + 1] as f64 * size,
-            mesh.vertices[i*3 + 2] as f64 * size,
-        ]) as f32 * height + offset;
-        mesh.vertices[i*3 + 0] *= 1.0 + val;
-        mesh.vertices[i*3 + 1] *= 1.0 + val;
-        mesh.vertices[i*3 + 2] *= 1.0 + val;
+    for i in 0..vertices.len() {
+        let val = 1.0 + fractal_noise(perlin, &vertices[i], size, height, offset);
+        vertices[i] *= val;
+        // let val = perlin.get([
+        //     mesh.vertices[i*3 + 0] as f64 * size, 
+        //     mesh.vertices[i*3 + 1] as f64 * size,
+        //     mesh.vertices[i*3 + 2] as f64 * size,
+        // ]) as f32 * height + offset;
+        // mesh.vertices[i*3 + 0] *= 1.0 + val;
+        // mesh.vertices[i*3 + 1] *= 1.0 + val;
+        // mesh.vertices[i*3 + 2] *= 1.0 + val;
     }
-
+    
     // TODO: Solve the seams, could reuse the noise generator and use polar coordinates
-    let vertices = to_array_of_vec3(mesh.vertices.clone());
     let mut normals = to_array_of_vec3(mesh.normals.clone());
     for i in (0..mesh.index_count).step_by(3) {
         let i = i as usize;
@@ -498,6 +522,7 @@ pub fn displace_vertices(mesh: &mut Mesh, size: f64, height: f32, offset: f32) {
         normals[mesh.indices[i + 2] as usize] = norm;
     }
     mesh.normals = from_array_of_vec3(normals);
+    mesh.vertices = from_array_of_vec3(vertices);
 }
 
 // pub struct Terrain;
