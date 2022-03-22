@@ -9,6 +9,7 @@ out vec3 v_position;
 out vec4 v_color;
 out vec3 v_normal;
 out vec2 v_uv;
+out vec3 v_model_position;
 
 uniform mat4 u_model;       // Transforms model into world coordinates
 uniform mat4 u_mvp;         // Model-view-perspective matrix
@@ -16,6 +17,7 @@ uniform mat4 u_mvp;         // Model-view-perspective matrix
 void main()
 {
     v_position = position;
+    v_model_position = position;
     v_color = color;
     v_uv = uv;
     v_normal = normalize(mat3(u_model) * normal);

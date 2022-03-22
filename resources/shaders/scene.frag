@@ -10,12 +10,18 @@ in vec3 v_position;
 in vec4 v_color;
 in vec3 v_normal;
 in vec2 v_uv;
+in vec3 v_model_position;
 
 uniform uint u_node_type;
 uniform bool u_has_texture;
 // uniform float u_time; // TODO add
 
 out vec4 color;
+
+  const uint k = 1103515245U;  // GLIB C
+//const uint k = 134775813U;   // Delphi and Turbo Pascal
+//const uint k = 20170906U;    // Today's date (use three days ago's dateif you want a prime)
+//const uint k = 1664525U;     // Numerical Recipes
 
 // Hash functions taken from demo by Dave Hoskins: https://www.shadertoy.com/view/4djSRW
 // 2 in 2 out
@@ -45,7 +51,13 @@ vec3 hash33(vec3 p3)
 	p3 = fract(p3 * vec3(.1031, .1030, .0973));
     p3 += dot(p3, p3.yxz+33.33);
     return fract((p3.xxy + p3.yxx)*p3.zyx);
-
+}
+// 3 in 1 out
+float hash13(vec3 p3)
+{
+	p3  = fract(p3 * .1031);
+    p3 += dot(p3, p3.zyx + 31.32);
+    return fract((p3.x + p3.y) * p3.z);
 }
 
 float rand1(in float x) { return fract(sin(x)*1e4); }
@@ -135,7 +147,7 @@ void main()
 vec4 planet_shader()
 {
     // Normal noise
-    vec3 normal = v_normal;// * hash32(v_uv);
+    vec3 normal = v_normal;
 
     // Lighting
     vec4 color;
@@ -168,7 +180,7 @@ vec4 skybox_shader()
     vec3 sun_pos = (normalize(sun) + 1.0) / 2.0;
     vec4 c;
     vec3 res = vec3(2.0, 2.0, 2.0);
-    vec3 st = (normalize(v_position) + 1.0) / 2.0;
+    vec3 st = (normalize(v_model_position) + 1.0) / 2.0;
     //st *= 10.0;
     // vec2 ipos = floor(st);
     // vec2 fpos = fract(st);
@@ -179,10 +191,11 @@ vec4 skybox_shader()
         c = vec4(0.8118, 0.3922, 0.0, 1.0);
     }
     else {
-        float v = (noise3d(st, 50.0) -0.2) * noise3d(st, 1000.0);
+        // float v = rand2(vec2(rand2(st.xy), st.z));//(noise3d(st, 50.0) -0.2) * noise3d(st, 1000.0);
 
-        c = vec4(vec3(v > 0.6 ? v : 0.0), 1.0);
+        // c = vec4(vec3(v > 0.9985 ? v : 0.0), 1.0);
         //c = vec4(st, 1.0);
+        c = v_color;
     }
 
     return c;
