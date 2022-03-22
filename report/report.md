@@ -20,7 +20,9 @@ toc: true
 # Showcase
 
 # Log
-
+* 22.3:
+    * Solved issue with texture loading, can now display text.
+    * Some refactoring of vao handling mesh/scene_graph
 * 21.3:
     * Calculate normals for displaced normals, but cubesphere now gets an annoying seam (as Lague experienced). Will need to decide whether to stay with cubesphere and find a solution for this, or follow Lague in using a spherified pyramid.
 * 20.3: 
