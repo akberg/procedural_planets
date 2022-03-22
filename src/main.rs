@@ -4,6 +4,7 @@ use std::thread;
 use std::sync::{Mutex, Arc, RwLock};
 
 use std::collections::HashMap;
+use image::io::Reader as ImageReader;
 
 mod shader;
 mod util;
@@ -29,127 +30,15 @@ const SCREEN_H: u32 = 600;
 
 const POLYMODES: [u32;3] = [gl::FILL, gl::POINT, gl::LINE];
 
-#[derive(Copy, Clone, Default, Debug)]
-struct VAOobj {
-    vao: u32,   // Vertex Array Object 
-    vbo: u32,   // Vertex Buffer Object
-    ibo: u32,   // Index Buffer Object
-    cbo: u32,   // Color Buffer Object
-    nbo: u32,   // Normal Buffer Object
-    texbo: u32, // Texture Buffer Object
-    n: i32,     // Number of triangles
-}
-
-
-/// Extended mkvao_simple_color to associate colors to vertices
-unsafe fn mkvao(obj: &mesh::Mesh) -> VAOobj {
-    let mut id = VAOobj { n: obj.index_count, ..Default::default() };
-
-    /* Create and bind vertex array */
-    //let mut id.vao = 0;
-    gl::GenVertexArrays(1, &mut id.vao);
-    gl::BindVertexArray(id.vao);
-
-    /* Create and bind index buffer, add data */
-    //let mut ibo = 0;
-    gl::GenBuffers(1, &mut id.ibo);
-    gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, id.ibo);
-
-    let ibuf_size = util::byte_size_of_array(&obj.indices);
-    let ibuf_data = util::pointer_to_array(&obj.indices);
-
-    gl::BufferData(gl::ELEMENT_ARRAY_BUFFER,
-                   ibuf_size,
-                   ibuf_data as *const _,
-                   gl::STATIC_DRAW);
-
-    // Next sections are vertex attributes
-
-    /* Create and bind vertex buffer, add data */
-    //let mut vbo = 0;
-    gl::GenBuffers(1, &mut id.vbo);
-    gl::BindBuffer(gl::ARRAY_BUFFER, id.vbo);
-
-    let vbuf_size = util::byte_size_of_array(&obj.vertices);
-    let vbuf_data = util::pointer_to_array(&obj.vertices);
-
-    gl::BufferData(gl::ARRAY_BUFFER, 
-                    vbuf_size,
-                    vbuf_data as *const _,
-                    gl::STATIC_DRAW); 
-
-    let mut attrib_idx = 0;
-    /* Define attrib ptr for vertex buffer */
-    gl::EnableVertexAttribArray(attrib_idx);
-    gl::VertexAttribPointer(attrib_idx, 3, gl::FLOAT, gl::FALSE, 0, std::ptr::null());
-
-    /* Create and bind color buffer, add data */
-    let mut cbo = 0;
-    gl::GenBuffers(1, &mut id.cbo);
-    gl::BindBuffer(gl::ARRAY_BUFFER, id.cbo);
-
-    let cbuf_size = util::byte_size_of_array(&obj.colors);
-    let cbuf_data = util::pointer_to_array(&obj.colors);
-
-    gl::BufferData( gl::ARRAY_BUFFER,
-                    cbuf_size,
-                    cbuf_data as *const _,
-                    gl::STATIC_DRAW);
-
-    attrib_idx += 1;
-    /* Define attrib ptr for color buffer */
-    gl::EnableVertexAttribArray(attrib_idx);
-    gl::VertexAttribPointer(attrib_idx, 4, gl::FLOAT, gl::FALSE, 0, std::ptr::null());
-
-    /* Add normals */
-    let mut nbo = 0;
-    gl::GenBuffers(1, &mut id.nbo);
-    gl::BindBuffer(gl::ARRAY_BUFFER, id.nbo);
-    let nbo_size = util::byte_size_of_array(&obj.normals);
-    let nbo_data = util::pointer_to_array(&obj.normals);
-
-    gl::BufferData( gl::ARRAY_BUFFER,
-                    nbo_size,
-                    nbo_data as *const _,
-                    gl::STATIC_DRAW);
-    
-    attrib_idx += 1;
-    /* Define attrib ptr for normals buffer */
-    gl::EnableVertexAttribArray(attrib_idx);
-    gl::VertexAttribPointer(attrib_idx, 3, gl::FLOAT, gl::FALSE, 0, std::ptr::null());
-
-    /* Add texture coordinates */
-    let mut texbo = 0;
-    gl::GenBuffers(1, &mut id.texbo);
-    gl::BindBuffer(gl::ARRAY_BUFFER, id.texbo);
-    let texbo_size = util::byte_size_of_array(&obj.texture_coordinates);
-    let texbo_data = util::pointer_to_array(&obj.texture_coordinates);
-
-    gl::BufferData( gl::ARRAY_BUFFER,
-                    texbo_size,
-                    texbo_data as *const _,
-                    gl::STATIC_DRAW);
-    
-    attrib_idx += 1;
-    /* Define attrib ptr for normals buffer */
-    gl::EnableVertexAttribArray(attrib_idx);
-    gl::VertexAttribPointer(attrib_idx, 2, gl::FLOAT, gl::FALSE, 0, std::ptr::null());
-
-    println!("Create object {:?}", id);
-    id
-}
-unsafe fn get_texture_id(img: &image::DynamicImage) -> u32 {
-    use image::GenericImageView;
-
-    println!("Generating texture id for image with dimensions {:?}", img.dimensions());
-
+/// Generate a texture binding for an RGBA8 image
+unsafe fn get_texture_id(img: &image::ImageBuffer<image::Rgba<u8>, std::vec::Vec<u8>>) -> u32 {
     let mut tex_id = 0;
     gl::GenTextures(1, &mut tex_id);
 
     gl::BindTexture(gl::TEXTURE_2D, tex_id);
 
-    // gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::REPEAT as i32);
-    // gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::REPEAT as i32);
+    gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::REPEAT as i32);
+    gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::REPEAT as i32);
     gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::NEAREST_MIPMAP_LINEAR as i32);
     gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as i32);
 
@@ -162,7 +51,7 @@ unsafe fn get_texture_id(img: &image::DynamicImage) -> u32 {
         0,
         gl::RGBA,
         gl::UNSIGNED_BYTE,
-        util::pointer_to_array(&img.as_bytes())
+        util::pointer_to_array(img)
     );
 
     gl::GenerateMipmap(gl::TEXTURE_2D);
@@ -235,9 +124,16 @@ fn main() {
         //---------------------------------------------------------------------/
         // Read config
         //---------------------------------------------------------------------/
-        let conf = util::Config::load();
-        // println!("{:?}", conf);
-        let mut polymode = 0;
+        let mut conf = util::Config::load();
+
+        //---------------------------------------------------------------------/
+        // Load charmap texture
+        //---------------------------------------------------------------------/
+        let mut charmap = ImageReader::open("resources/textures/charmap.png").unwrap()
+            .decode().unwrap()
+            .flipv()
+            .into_rgba8();
+        let charmap_id = unsafe { get_texture_id(&charmap) };
 
         //---------------------------------------------------------------------/
         // Camera setup (available for keypress handler)
@@ -283,28 +179,44 @@ fn main() {
             glm::vec3(1.0, 1.0, 1.0),
             glm::vec4(1.0, 0.0, 0.0, 1.0),
         );
-        let cube_vao = unsafe { mkvao(&cube_mesh) };
-        let cube_node = SceneNode::from_vao(cube_vao.vao, cube_vao.n);
+        let cube_vao = unsafe { cube_mesh.mkvao() };
+        let cube_node = SceneNode::from_vao(cube_vao);
 
         // Skybox, inverted cube that stays centered around the player
-        let skybox_mesh = mesh::Mesh::cube(
+        let mut skybox_mesh = mesh::Mesh::cube(
             glm::vec3(conf.clip_far-0.1, conf.clip_far-0.1, conf.clip_far-0.1), // Defines visible distance of other objects
             glm::vec2(1.0, 1.0), true, true, 
             glm::vec3(1.0, 1.0, 1.0),
-            glm::vec4(0.01, 0.01, 0.06, 0.2),
+            glm::vec4(0.05, 0.01, 0.06, 0.2),
         );
-        let skybox_vao = unsafe { mkvao(&skybox_mesh) };
-        let mut skybox_node = SceneNode::from_vao(skybox_vao.vao, skybox_vao.n);
+        // TODO: Figure out
+        // use noise::NoiseFn;
+        // let noisefn = noise::Perlin::new();
+        // for i in 0..skybox_mesh.vertices.len() / 3 {
+        //     let v = (noisefn.get([
+        //         skybox_mesh.vertices[i * 3 + 0] as f64 * 10.0,
+        //         skybox_mesh.vertices[i * 3 + 1] as f64 * 10.0,
+        //         skybox_mesh.vertices[i * 3 + 2] as f64 * 10.0,
+        //     ]) + 1.0) as f32 / 2.0;
+        //     skybox_mesh.colors[i * 4 + 0] = v;
+        //     skybox_mesh.colors[i * 4 + 1] = v;
+        //     skybox_mesh.colors[i * 4 + 2] = v;
+        //     skybox_mesh.colors[i * 4 + 3] = 1.0;
+        // }
+        let skybox_vao = unsafe { skybox_mesh.mkvao() };
+        let mut skybox_node = SceneNode::from_vao(skybox_vao);
         skybox_node.node_type = SceneNodeType::Skybox;
 
 
         // TODO: Make this more elegant:
 
         let mut cubesphere = SceneNode::with_type(SceneNodeType::Empty);
+        cubesphere.scale *= 10.0;
         let size = 10.0;
         let height = 0.05;
         let offset = 0.0;
         let subdivisions = 256;
+        let color = glm::vec4(0.2, 0.8, 0.4, 1.0);
 
         // Top
         let mut plane0_mesh = mesh::Mesh::cs_plane(
@@ -312,66 +224,66 @@ fn main() {
             glm::vec3(0.0, 0.0, 0.0),
             glm::vec3(0.0, 1.0, 0.0),
             128, true,
-            Some(glm::vec4(0.8, 0.2, 0.4, 1.0))
+            Some(color)
         );
         mesh::displace_vertices(&mut plane0_mesh, size, height, offset);
-        let plane0_vao = unsafe { mkvao(&plane0_mesh) };
-        let mut plane0_node = SceneNode::from_vao(plane0_vao.vao, plane0_vao.n);
+        let plane0_vao = unsafe { plane0_mesh.mkvao() };
+        let mut plane0_node = SceneNode::from_vao(plane0_vao);
         // Bottom
         let mut plane1_mesh = mesh::Mesh::cs_plane(
             glm::vec3(1.0, 1.0, 1.0), 
             glm::vec3(std::f32::consts::PI, 0.0, 0.0),
             glm::vec3(0.0, -1.0, 0.0),
             128, true,
-            Some(glm::vec4(0.8, 0.2, 0.4, 1.0))
+            Some(color)
         );
         mesh::displace_vertices(&mut plane1_mesh, size, height, offset);
-        let plane1_vao = unsafe { mkvao(&plane1_mesh) };
-        let mut plane1_node = SceneNode::from_vao(plane1_vao.vao, plane1_vao.n);
+        let plane1_vao = unsafe { plane1_mesh.mkvao() };
+        let mut plane1_node = SceneNode::from_vao(plane1_vao);
         // Front
         let mut plane2_mesh = mesh::Mesh::cs_plane(
             glm::vec3(1.0, 1.0, 1.0), 
             glm::vec3(std::f32::consts::FRAC_PI_2, 0.0, 0.0),
             glm::vec3(0.0, 0.0, 1.0),
             128, true,
-            Some(glm::vec4(0.8, 0.2, 0.4, 1.0))
+            Some(color)
         );
         mesh::displace_vertices(&mut plane2_mesh, size, height, offset);
-        let plane2_vao = unsafe { mkvao(&plane2_mesh) };
-        let mut plane2_node = SceneNode::from_vao(plane2_vao.vao, plane2_vao.n);
+        let plane2_vao = unsafe { plane2_mesh.mkvao() };
+        let mut plane2_node = SceneNode::from_vao(plane2_vao);
         // Back
         let mut plane3_mesh = mesh::Mesh::cs_plane(
             glm::vec3(1.0, 1.0, 1.0), 
             glm::vec3(-std::f32::consts::FRAC_PI_2, 0.0, 0.0),
             glm::vec3(0.0, 0.0, -1.0),
             128, true,
-            Some(glm::vec4(0.8, 0.2, 0.4, 1.0))
+            Some(color)
         );
         mesh::displace_vertices(&mut plane3_mesh, size, height, offset);
-        let plane3_vao = unsafe { mkvao(&plane3_mesh) };
-        let mut plane3_node = SceneNode::from_vao(plane3_vao.vao, plane3_vao.n);
+        let plane3_vao = unsafe { plane3_mesh.mkvao() };
+        let mut plane3_node = SceneNode::from_vao(plane3_vao);
         // Left
         let mut plane4_mesh = mesh::Mesh::cs_plane(
             glm::vec3(1.0, 1.0, 1.0), 
             glm::vec3(0.0, 0.0, -std::f32::consts::FRAC_PI_2),
             glm::vec3(1.0, 0.0, 0.0),
             128, true,
-            Some(glm::vec4(0.8, 0.2, 0.4, 1.0))
+            Some(color)
         );
         mesh::displace_vertices(&mut plane4_mesh, size, height, offset);
-        let plane4_vao = unsafe { mkvao(&plane4_mesh) };
-        let mut plane4_node = SceneNode::from_vao(plane4_vao.vao, plane4_vao.n);
+        let plane4_vao = unsafe { plane4_mesh.mkvao() };
+        let mut plane4_node = SceneNode::from_vao(plane4_vao);
         // Right
         let mut plane5_mesh = mesh::Mesh::cs_plane(
             glm::vec3(1.0, 1.0, 1.0), 
             glm::vec3(0.0, 0.0, std::f32::consts::FRAC_PI_2),
             glm::vec3(-1.0, 0.0, 0.0),
             128, true,
-            Some(glm::vec4(0.8, 0.2, 0.4, 1.0))
+            Some(color)
         );
         mesh::displace_vertices(&mut plane5_mesh, size, height, offset);
-        let plane5_vao = unsafe { mkvao(&plane5_mesh) };
-        let mut plane5_node = SceneNode::from_vao(plane5_vao.vao, plane5_vao.n);
+        let plane5_vao = unsafe { plane5_mesh.mkvao() };
+        let mut plane5_node = SceneNode::from_vao(plane5_vao);
                 
         cubesphere.add_child(&plane0_node);
         cubesphere.add_child(&plane1_node);
@@ -396,8 +308,8 @@ fn main() {
             Some(color)
         );
         // mesh::displace_vertices(&mut plane0_mesh, size, height, offset);
-        let plane0_vao = unsafe { mkvao(&plane0_mesh) };
-        let mut plane0_node = SceneNode::from_vao(plane0_vao.vao, plane0_vao.n);
+        let plane0_vao = unsafe { plane0_mesh.mkvao() };
+        let mut plane0_node = SceneNode::from_vao(plane0_vao);
         // Bottom
         let mut plane1_mesh = mesh::Mesh::cs_plane(
             glm::vec3(1.0, 1.0, 1.0), 
@@ -407,8 +319,8 @@ fn main() {
             Some(color)
         );
         // mesh::displace_vertices(&mut plane1_mesh, size, height, offset);
-        let plane1_vao = unsafe { mkvao(&plane1_mesh) };
-        let mut plane1_node = SceneNode::from_vao(plane1_vao.vao, plane1_vao.n);
+        let plane1_vao = unsafe { plane1_mesh.mkvao() };
+        let mut plane1_node = SceneNode::from_vao(plane1_vao);
         // Front
         let mut plane2_mesh = mesh::Mesh::cs_plane(
             glm::vec3(1.0, 1.0, 1.0), 
@@ -418,8 +330,8 @@ fn main() {
             Some(color)
         );
         // mesh::displace_vertices(&mut plane2_mesh, size, height, offset);
-        let plane2_vao = unsafe { mkvao(&plane2_mesh) };
-        let mut plane2_node = SceneNode::from_vao(plane2_vao.vao, plane2_vao.n);
+        let plane2_vao = unsafe { plane2_mesh.mkvao() };
+        let mut plane2_node = SceneNode::from_vao(plane2_vao);
         // Back
         let mut plane3_mesh = mesh::Mesh::cs_plane(
             glm::vec3(1.0, 1.0, 1.0), 
@@ -429,8 +341,8 @@ fn main() {
             Some(color)
         );
         // mesh::displace_vertices(&mut plane3_mesh, size, height, offset);
-        let plane3_vao = unsafe { mkvao(&plane3_mesh) };
-        let mut plane3_node = SceneNode::from_vao(plane3_vao.vao, plane3_vao.n);
+        let plane3_vao = unsafe { plane3_mesh.mkvao() };
+        let mut plane3_node = SceneNode::from_vao(plane3_vao);
         // Left
         let mut plane4_mesh = mesh::Mesh::cs_plane(
             glm::vec3(1.0, 1.0, 1.0), 
@@ -440,8 +352,8 @@ fn main() {
             Some(color)
         );
         // mesh::displace_vertices(&mut plane4_mesh, size, height, offset);
-        let plane4_vao = unsafe { mkvao(&plane4_mesh) };
-        let mut plane4_node = SceneNode::from_vao(plane4_vao.vao, plane4_vao.n);
+        let plane4_vao = unsafe { plane4_mesh.mkvao() };
+        let mut plane4_node = SceneNode::from_vao(plane4_vao);
         // Right
         let mut plane5_mesh = mesh::Mesh::cs_plane(
             glm::vec3(1.0, 1.0, 1.0), 
@@ -451,8 +363,8 @@ fn main() {
             Some(color)
         );
         // mesh::displace_vertices(&mut plane5_mesh, size, height, offset);
-        let plane5_vao = unsafe { mkvao(&plane5_mesh) };
-        let mut plane5_node = SceneNode::from_vao(plane5_vao.vao, plane5_vao.n);
+        let plane5_vao = unsafe { plane5_mesh.mkvao() };
+        let mut plane5_node = SceneNode::from_vao(plane5_vao);
 
 
         // let mut plane5_node = SceneNode::with_type(SceneNodeType::Empty);
@@ -474,49 +386,26 @@ fn main() {
         cs_ocean.add_child(&plane3_node);
         cs_ocean.add_child(&plane4_node);
         cs_ocean.add_child(&plane5_node);
-        cs_ocean.scale *= 1.001;
+        cs_ocean.scale *= 10.001;
 
         // let part_plane = mesh::Mesh::cs_part_plane(glm::vec3(-1.0, 0.0, 1.0), glm::vec3(1.0, 0.0, -1.0), 64, true);
         // let pplane_vao = unsafe { mkvao(&part_plane) };
         // let mut pplane_node = SceneNode::from_vao(pplane_vao.vao, pplane_vao.n);
 
-        // let my_text = mesh::Mesh::text_buffer("0123456789", 49.0 / 29.0, 2.0);
-        // println!("text texture coordinates: {:?}", my_text.texture_coordinates);
-        // let text_vao = unsafe {mkvao(&my_text)};
-        // let mut text_node = SceneNode::from_vao(text_vao.vao, text_vao.n);
-        // text_node.node_type = SceneNodeType::Geometry2d;
+        let text_title = mesh::Mesh::text_buffer("THE GAME", 49.0 / 29.0, 1.0);
+        let mut text_title_node = SceneNode::from_vao(unsafe { text_title.mkvao() });
+        text_title_node.node_type = SceneNodeType::Geometry2d;
+        text_title_node.texture_id = Some(charmap_id);
+        text_title_node.position = glm::vec3(-0.5, 0.7, 0.0);
+        text_title_node.scale = glm::vec3(1.0, 1.0, 1.0);
 
-        // let charmap = image::open("resources/textures/charmap.png").unwrap().flipv();
-        // use std::io::Cursor;
-        // use image::io::Reader as ImageReader;
-        // let charmap = ImageReader::open("resources/textures/charmap.png").unwrap().decode().unwrap().flipv();
-
-        // let charmap_id = unsafe { get_texture_id(&charmap) };
-        // text_node.texture_id = Some(charmap_id);
-        // text_node.position = glm::vec3(-0.5, 0.0, 0.0);
-        // text_node.scale = glm::vec3(0.2, 0.2, 0.2);
-        
-        /* Load terrain */
-        // let terrain_obj = mesh::Terrain::load("resources/lunarsurface.obj");
-        // let terrain_vao = unsafe { mkvao(&terrain_obj) };
-
-        // /* Load Helicopter */
-        // let helicopter = mesh::Helicopter::load("resources/helicopter.obj");
-        // let heli_door_vao = unsafe { mkvao(&helicopter.door) };
-        // let heli_body_vao = unsafe { mkvao(&helicopter.body) };
-        // let heli_main_rotor_vao = unsafe { mkvao(&helicopter.main_rotor) };
-        // let heli_tail_rotor_vao = unsafe { mkvao(&helicopter.tail_rotor) };
-
-        // let mut doors = false;
-        // let mut doors_start = 0.0;
 
         //---------------------------------------------------------------------/
         // Make Scene graph
         //---------------------------------------------------------------------/
         let mut scene_root = SceneNode::new();
         // scene_root.add_child(&cube_node);
-        //scene_root.add_child(&skybox_node);
-        // scene_root.add_child(&text_node);
+        scene_root.add_child(&skybox_node);
         scene_root.add_child(&cubesphere);
         scene_root.add_child(&cs_ocean);
         // scene_root.add_child(&plane0_node);
@@ -524,6 +413,9 @@ fn main() {
         unsafe { scene_root.update_node_transformations(&glm::identity()); }
 
         scene_root.print();
+
+        let mut gui_root = SceneNode::new();
+        gui_root.add_child(&text_title_node);
 
         // Basic usage of shader helper:
         // The example code below returns a shader object, which contains the field `.program_id`.
@@ -558,18 +450,25 @@ fn main() {
                 conf.clip_near, // near
                 conf.clip_far   // far
             );
+        let mut timestamp = 0.0;
+        let timestep = 0.001;
 
+
+        //---------------------------------------------------------------------/        
+        // Timing
+        //---------------------------------------------------------------------/
         let first_frame_time = std::time::Instant::now();
         let mut last_frame_time = first_frame_time;
 
-        // Input
         let mut key_debounce: HashMap<VirtualKeyCode, u32> = HashMap::new();
+
         // The main rendering loop
         loop {
             let now = std::time::Instant::now();
             let elapsed = now.duration_since(first_frame_time).as_secs_f32();
             let delta_time = now.duration_since(last_frame_time).as_secs_f32();
             last_frame_time = now;
+            timestamp += timestep;
 
             key_debounce.iter_mut().for_each(|(_, v)| if *v > 0 { *v -= 1; });
 
@@ -623,7 +522,7 @@ fn main() {
                         VirtualKeyCode::M => {
                             let v = key_debounce.entry(VirtualKeyCode::M).or_insert(0);
                             if *v == 0 {
-                                polymode = (polymode + 1) % 3;
+                                conf.polymode = (conf.polymode + 1) % 3;
                                 *v = 10;
                             }
                         }
@@ -640,7 +539,6 @@ fn main() {
                 /* Look up/down (vertical angle), rotate around x axis */
                 v_angle -= (*delta).1 * delta_time * mouse_speed;
                 direction = util::vec_direction(h_angle, v_angle);
-                //heli_body_nodes[n_helis].rotation = glm::vec3(-direction.x, -direction.z, -direction.y);
                 right = util::vec_right(h_angle);
                 up = glm::cross(&right, &direction);
 
@@ -649,22 +547,29 @@ fn main() {
 
             skybox_node.position = position;
 
+            //-------------------------------------------------------------/
+            // Draw section
+            //-------------------------------------------------------------/
             unsafe {
-                //-------------------------------------------------------------/
-                // Draw section
-                //-------------------------------------------------------------/
+                // Global uniforms
+                let u_time = sh.get_uniform_location("u_time");
+                gl::Uniform1f(u_time, timestamp);
+
                 // First person view
                 let cam = glm::look_at(&position, &(position+direction), &up);
                 let perspective_view = perspective_mat * cam;
                 // let perspective_view = perspective_mat * glm::look_at(&position, &heli_body_nodes[n_helis].position, &up);
 
+                // Clear background
                 gl::ClearColor(conf.bg_color[0], conf.bg_color[1], conf.bg_color[2], conf.bg_color[3]);
                 gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
 
                 /* Draw scene graph */
-                gl::PolygonMode(gl::FRONT_AND_BACK, POLYMODES[polymode]);
+                gl::PolygonMode(gl::FRONT_AND_BACK, POLYMODES[conf.polymode]);
                 scene_root.update_node_transformations(&glm::identity());
                 scene_root.draw_scene(&perspective_view, &sh);
+                gui_root.update_node_transformations(&glm::identity());
+                gui_root.draw_scene(&perspective_view, &sh);
             }
 
             context.swap_buffers().unwrap();

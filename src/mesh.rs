@@ -1,7 +1,9 @@
 use tobj;
 use itertools::Itertools;
-use std::fmt::Debug;
+// use std::fmt::Debug;
 use glm::Scalar;
+
+use crate::util;
 
 // internal helper
 fn generate_color_vec(color: glm::TVec4<f32>, num: usize) -> Vec<f32> {
@@ -13,6 +15,9 @@ fn smin(a: f32, b: f32, k: f32) -> f32 {
     let h = 0.0f32.max(k - (a-b).abs()) / k;
     return a.min(b) - h.powi(3) * k / 6.0;
 }
+
+// glm utils
+
 /// Convert an array of Vec2 into an array of numbers
 pub fn from_array_of_vec2<T: Scalar + Copy>(arr: Vec<glm::TVec2<T>>) -> Vec<T> {
     arr.iter()
@@ -71,10 +76,22 @@ pub fn to_array_of_vec4<T: Scalar + Copy>(arr: Vec<T>) -> Vec<glm::TVec4<T>> {
         .collect::<_>()
 }
 
+// GL util VAO object
+#[derive(Copy, Clone, Default, Debug)]
+pub struct VAOobj {
+    pub vao: u32,   // Vertex Array Object 
+    pub vbo: u32,   // Vertex Buffer Object
+    pub ibo: u32,   // Index Buffer Object
+    pub cbo: u32,   // Color Buffer Object
+    pub nbo: u32,   // Normal Buffer Object
+    pub texbo: u32, // Texture Buffer Object
+    pub n: i32,     // Index Count
+}
+
 //-----------------------------------------------------------------------------/
 // Mesh
 //-----------------------------------------------------------------------------/
-
+#[derive(Default)]
 pub struct Mesh {
     pub vertices: Vec<f32>,
     pub normals: Vec<f32>,
@@ -96,6 +113,104 @@ impl Mesh {
             colors: generate_color_vec(color, num_verts),
             index_count,
         }
+    }
+
+    /// Extended mkvao_simple_color to associate colors to vertices
+    pub unsafe fn mkvao(&self) -> VAOobj {
+        let mut id = VAOobj { n: self.index_count, ..Default::default() };
+
+        /* Create and bind vertex array */
+        //let mut id.vao = 0;
+        gl::GenVertexArrays(1, &mut id.vao);
+        gl::BindVertexArray(id.vao);
+
+        /* Create and bind index buffer, add data */
+        //let mut ibo = 0;
+        gl::GenBuffers(1, &mut id.ibo);
+        gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, id.ibo);
+
+        let ibuf_size = util::byte_size_of_array(&self.indices);
+        let ibuf_data = util::pointer_to_array(&self.indices);
+
+        gl::BufferData(gl::ELEMENT_ARRAY_BUFFER,
+                    ibuf_size,
+                    ibuf_data as *const _,
+                    gl::STATIC_DRAW);
+
+        // Next sections are vertex attributes
+
+        /* Create and bind vertex buffer, add data */
+        //let mut vbo = 0;
+        gl::GenBuffers(1, &mut id.vbo);
+        gl::BindBuffer(gl::ARRAY_BUFFER, id.vbo);
+
+        let vbuf_size = util::byte_size_of_array(&self.vertices);
+        let vbuf_data = util::pointer_to_array(&self.vertices);
+
+        gl::BufferData(gl::ARRAY_BUFFER, 
+                        vbuf_size,
+                        vbuf_data as *const _,
+                        gl::STATIC_DRAW); 
+
+        let mut attrib_idx = 0;
+        /* Define attrib ptr for vertex buffer */
+        gl::EnableVertexAttribArray(attrib_idx);
+        gl::VertexAttribPointer(attrib_idx, 3, gl::FLOAT, gl::FALSE, 0, std::ptr::null());
+
+        /* Create and bind color buffer, add data */
+        let mut cbo = 0;
+        gl::GenBuffers(1, &mut id.cbo);
+        gl::BindBuffer(gl::ARRAY_BUFFER, id.cbo);
+
+        let cbuf_size = util::byte_size_of_array(&self.colors);
+        let cbuf_data = util::pointer_to_array(&self.colors);
+
+        gl::BufferData( gl::ARRAY_BUFFER,
+                        cbuf_size,
+                        cbuf_data as *const _,
+                        gl::STATIC_DRAW);
+
+        attrib_idx += 1;
+        /* Define attrib ptr for color buffer */
+        gl::EnableVertexAttribArray(attrib_idx);
+        gl::VertexAttribPointer(attrib_idx, 4, gl::FLOAT, gl::FALSE, 0, std::ptr::null());
+
+        /* Add normals */
+        let mut nbo = 0;
+        gl::GenBuffers(1, &mut id.nbo);
+        gl::BindBuffer(gl::ARRAY_BUFFER, id.nbo);
+        let nbo_size = util::byte_size_of_array(&self.normals);
+        let nbo_data = util::pointer_to_array(&self.normals);
+
+        gl::BufferData( gl::ARRAY_BUFFER,
+                        nbo_size,
+                        nbo_data as *const _,
+                        gl::STATIC_DRAW);
+        
+        attrib_idx += 1;
+        /* Define attrib ptr for normals buffer */
+        gl::EnableVertexAttribArray(attrib_idx);
+        gl::VertexAttribPointer(attrib_idx, 3, gl::FLOAT, gl::FALSE, 0, std::ptr::null());
+
+        /* Add texture coordinates */
+        let mut texbo = 0;
+        gl::GenBuffers(1, &mut id.texbo);
+        gl::BindBuffer(gl::ARRAY_BUFFER, id.texbo);
+        let texbo_size = util::byte_size_of_array(&self.texture_coordinates);
+        let texbo_data = util::pointer_to_array(&self.texture_coordinates);
+
+        gl::BufferData( gl::ARRAY_BUFFER,
+                        texbo_size,
+                        texbo_data as *const _,
+                        gl::STATIC_DRAW);
+        
+        attrib_idx += 1;
+        /* Define attrib ptr for normals buffer */
+        gl::EnableVertexAttribArray(attrib_idx);
+        gl::VertexAttribPointer(attrib_idx, 2, gl::FLOAT, gl::FALSE, 0, std::ptr::null());
+
+        eprintln!("Create object {:?}", id);
+        id
     }
 
     pub fn cube(
@@ -222,7 +337,6 @@ impl Mesh {
         let mut indices = vec![0; index_count as usize];
 
         for (i, c) in text.chars().enumerate() {
-            println!("{}", c as u8);
             let base_x = i as f32 * char_w;
 
             vertices[4 * i + 0] = glm::vec3(base_x, 0.0, 0.0);

@@ -3,6 +3,8 @@ extern crate nalgebra_glm as glm;
 use std::mem::ManuallyDrop;
 use std::pin::Pin;
 
+use crate::{mesh, util};
+
 // Used to create an unholy abomination upon which you should not cast your gaze. This ended up
 // being a necessity due to wanting to keep the code written by students as "straight forward" as
 // possible. It is very very double plus ungood Rust, and intentionally leaks memory like a sieve.
@@ -56,7 +58,7 @@ pub struct SceneNode {
     pub name        : String,
     pub current_transformation_matrix: glm::Mat4, // The fruits of my labor
 
-    pub vao_id      : u32,             // What I should draw
+    pub vao         : mesh::VAOobj,             // What I should draw
     pub index_count : i32,             // How much of it I shall draw
 
     // IDs of maps
@@ -76,7 +78,7 @@ impl SceneNode {
             node_type       : SceneNodeType::Empty,
             name            : String::new(),
             current_transformation_matrix: glm::identity(),
-            vao_id          : 0,
+            vao             : Default::default(),
             index_count     : -1,
             texture_id      : None,
             children        : vec![],
@@ -92,14 +94,14 @@ impl SceneNode {
             node_type,
             name            : String::new(),
             current_transformation_matrix: glm::identity(),
-            vao_id          : 0,
+            vao             : Default::default(),
             index_count     : -1,
             texture_id      : None,
             children        : vec![],
         })))
     }
 
-    pub fn from_vao(vao_id: u32, index_count: i32) -> Node {
+    pub fn from_vao(vao: mesh::VAOobj) -> Node {
         ManuallyDrop::new(Pin::new(Box::new(SceneNode {
             position        : glm::zero(),
             rotation        : glm::zero(),
@@ -108,8 +110,8 @@ impl SceneNode {
             node_type       : SceneNodeType::Geometry,
             name            : String::new(),
             current_transformation_matrix: glm::identity(),
-            vao_id,
-            index_count,
+            vao             : vao,
+            index_count     : vao.n,
             texture_id      : None,
             children: vec![],
         })))
@@ -136,7 +138,7 @@ impl SceneNode {
         let m = self.current_transformation_matrix;
         println!(
             "SceneNode {{
-                VAO:       {}
+                VAO:       {:?}
                 Indices:   {}
                 Children:  {}
                 Position:  [{:.2}, {:.2}, {:.2}]
@@ -148,7 +150,7 @@ impl SceneNode {
                     {:.2}  {:.2}  {:.2}  {:.2}
                     {:.2}  {:.2}  {:.2}  {:.2}
             }}",
-            self.vao_id,
+            self.vao,
             self.index_count,
             self.children.len(),
             self.position.x,
@@ -208,7 +210,7 @@ impl SceneNode {
         SceneNodeType::Geometry | 
         SceneNodeType::Geometry2d | 
         SceneNodeType::Skybox => {
-            gl::BindVertexArray(self.vao_id);
+            gl::BindVertexArray(self.vao.vao);
         
             let u_node_type = sh.get_uniform_location("u_node_type");
             gl::Uniform1ui(u_node_type, self.node_type as u32);
@@ -243,9 +245,44 @@ impl SceneNode {
         }
     }
 
-    pub unsafe fn update_vertex_buffer(&self) {
-        gl::BindVertexArray(self.vao_id);
+    pub unsafe fn update_vertex_buffer(&self, mesh: &mesh::Mesh) {
+        gl::BindVertexArray(self.vao.vao);
         // TODO: Implement
+        gl::BindBuffer(gl::ARRAY_BUFFER, self.vao.vbo);
+        
+        let vbuf_size = util::byte_size_of_array(&mesh.vertices);
+        let vbuf_data = util::pointer_to_array(&mesh.vertices);
+
+        gl::BufferData(gl::ARRAY_BUFFER, 
+                        vbuf_size,
+                        vbuf_data as *const _,
+                        gl::STATIC_DRAW); 
+    }
+    pub unsafe fn update_normal_buffer(&self, mesh: &mesh::Mesh) {
+        gl::BindVertexArray(self.vao.vao);
+        // TODO: Implement
+        gl::BindBuffer(gl::ARRAY_BUFFER, self.vao.nbo);
+        
+        let nbuf_size = util::byte_size_of_array(&mesh.normals);
+        let nbuf_data = util::pointer_to_array(&mesh.normals);
+
+        gl::BufferData(gl::ARRAY_BUFFER, 
+                        nbuf_size,
+                        nbuf_data as *const _,
+                        gl::STATIC_DRAW); 
+    }
+    pub unsafe fn update_texture_buffer(&self, mesh: &mesh::Mesh) {
+        gl::BindVertexArray(self.vao.vao);
+        // TODO: Implement
+        gl::BindBuffer(gl::ARRAY_BUFFER, self.vao.texbo);
+        
+        let tbuf_size = util::byte_size_of_array(&mesh.texture_coordinates);
+        let tbuf_data = util::pointer_to_array(&mesh.texture_coordinates);
+
+        gl::BufferData(gl::ARRAY_BUFFER, 
+                        tbuf_size,
+                        tbuf_data as *const _,
+                        gl::STATIC_DRAW); 
     }
 }
 

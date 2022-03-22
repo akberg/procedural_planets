@@ -85,6 +85,7 @@ pub struct Config {
     pub init_h_angle: f32,
     pub init_v_angle: f32,
     pub camera_position: i32,
+    pub polymode: usize,
     //init_direction: [f32; 3],
 }
 
@@ -124,6 +125,7 @@ impl Config {
                     "camera_position" => conf.camera_position = val.trim().parse::<i32>().unwrap(),
                     "init_position" => conf.init_position = Self::parse_array::<f32, 3>(val),
                     "bg_color" => conf.bg_color = Self::parse_array::<f32, 4>(val),
+                    "polymode" => conf.polymode = val.trim().parse::<usize>().unwrap(),
                     //"init_direction" => conf.init_direction = Self::parse_array::<f32, 3>(val),
                     &_ => (),
                 }
