@@ -6,6 +6,7 @@
 ![Added noise to displace the vertices](report/images/cubesphere-w-vertex-noise.png)
 ![Computed normals, but struggling with seams](report/images/cubesphere-w-noise-normal-seam.png)
 ![Apply noise and add an additional sphere as an ocean](report/images/red-planet-w-ocean.png)
+![Playing with adding a height depentend colour map](report/images/planet-w-cheated-heightmap.png)
 
 ## Project description: Procedurally generated planet
 
@@ -32,12 +33,13 @@ Keywords:
 * Types of sphere: UV, normalized, spherified cube, spherified pyramid, fibonacci, icosphere
 * Merging VAOs to save draw calls? Subdividing a cube potentially creates many meshes to draw
 * Terrain: Cube marching, or noise texture mapped to sphere
-* Optionally extend to a little solar system
-* Collision detection to allow for a player to land on the planet
+    * Noise texture applied to vertices. Try porting cubesphere generation and noise generation to compute shader
+* Optionally extend to a little solar system, let planets have fixed orbits
+* Collision detection to allow for a player to land on the planet (use `length(player_pos - planet_pos) > length(noise(vertex))`)
 * Lighting: A sun, could try to add an atmosphere
 * Particles: stones, trees
 * Controller: A spaceship mesh
-* Skybox: stars and ambient light
+* Skybox: stars and ambient light. Implicit geometry: draw closest planet from vertex buffer, and draw all other objects on skybox from noise parameters and SDF.
 
 Online resources
 
