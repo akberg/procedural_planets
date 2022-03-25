@@ -464,8 +464,7 @@ fn main() {
         //---------------------------------------------------------------------/
         // Uniform values
         //---------------------------------------------------------------------/
-        let mut timestamp = 0.0;
-        let timestep = 0.001;
+        let mut timestamp = std::time::SystemTime::now();
 
 
         //---------------------------------------------------------------------/        
@@ -483,7 +482,6 @@ fn main() {
             let elapsed = now.duration_since(first_frame_time).as_secs_f32();
             let delta_time = now.duration_since(last_frame_time).as_secs_f32();
             last_frame_time = now;
-            timestamp += timestep;
 
             key_debounce.iter_mut().for_each(|(_, v)| if *v > 0 { *v -= 1; });
 
@@ -612,7 +610,7 @@ fn main() {
             unsafe {
                 // Global uniforms
                 let u_time = sh.get_uniform_location("u_time");
-                gl::Uniform1f(u_time, timestamp);
+                gl::Uniform1f(u_time, timestamp.elapsed().unwrap().as_secs_f32());
 
                 // First person view
                 let cam = glm::look_at(&position, &(position+direction), &up);

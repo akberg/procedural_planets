@@ -16,7 +16,7 @@ in vec3 v_model_position;
 
 uniform uint u_node_type;
 uniform bool u_has_texture;
-// uniform float u_time; // TODO add
+uniform float u_time; // TODO add
 
 out vec4 color;
 
@@ -88,10 +88,9 @@ float noise2d(vec2 st)
         (d - b) * u.x * u.y;
 }
 
-float noise3d(vec3 p, float size)
+float noise3d(vec3 p)
 {
     const vec3 _step = vec3(110.0, 241.0, 171.0);
-    p *= size;
 
     vec3 i = floor(p);
     vec3 f = fract(p);
@@ -125,6 +124,7 @@ float sphere_sdf(vec3 pos, vec3 origo, float r)
 
 vec4 planet_shader();
 vec4 skybox_shader();
+vec4 ocean_shader(vec3 ocean_color);
 
 void main()
 {
@@ -132,8 +132,10 @@ void main()
     switch (u_node_type) {
     case NODE_TYPE_GEOMETRY:
     case NODE_TYPE_PLANET:
-    case NODE_TYPE_OCEAN:
         color = planet_shader();
+        break;
+    case NODE_TYPE_OCEAN:
+        color = ocean_shader(vec3(0.05, 0.4, 0.7));
         break;
     case NODE_TYPE_SKYBOX:
         color = skybox_shader();
@@ -201,29 +203,150 @@ vec4 planet_shader()
     return color;
 }
 
+vec3 phong_light(
+    vec3 diffuse_color, 
+    vec3 ambient_color, 
+    vec3 specular_color, 
+    vec3 normal, 
+    vec3 light
+) {
+    // Lighting
+    float diffuse = max(dot(normalize(normal), normalize(light)), 0.0);
+    vec3 camera_dir = normalize(-v_position);
+    vec3 half_direction = normalize(normalize(light) + camera_dir);
+    float specular = pow(max(dot(half_direction, normalize(normal)), 0.0), 32.0);
+
+    return vec3(
+        ambient_color + diffuse * diffuse_color + specular * specular_color
+    );
+}
+
+/*
+ * "Seascape" by Alexander Alekseev aka TDM - 2014
+ * License Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License.
+ * Contact: tdmaav@gmail.com
+ */
+// sea constants (to be made uniforms)
+const float PI	 	= 3.141592;
+const float EPSILON	= 1e-3;
+const int ITER_GEOMETRY = 3;
+const int ITER_FRAGMENT = 5 * 2;
+const float SEA_HEIGHT = 0.3 / 8.0;
+const float SEA_CHOPPY = 8.0;
+const float SEA_SPEED = 0.8 / 64.0;
+const float SEA_FREQ = 0.16 * 32.0;
+const vec3 SEA_BASE = vec3(0.0,0.09,0.18);
+const vec3 SEA_WATER_COLOR = vec3(0.8,0.9,0.6)*0.6;
+#define SEA_TIME (1.0 + u_time * SEA_SPEED)
+const mat2 octave_m = mat2(1.6,1.2,-1.2,1.6);
+// sea
+float sea_octave(vec2 uv, float choppy) {
+    uv += noise2d(uv);        
+    vec2 wv = 1.0-abs(sin(uv));
+    vec2 swv = abs(cos(uv));    
+    wv = mix(wv,swv,wv);
+    return pow(1.0-pow(wv.x * wv.y,0.65),choppy);
+}
+float map_detailed(vec3 p) {
+    float freq = SEA_FREQ;
+    float amp = SEA_HEIGHT;
+    float choppy = SEA_CHOPPY;
+    vec2 uv = p.xz; uv.x *= 0.75;
+    
+    float d, h = 0.0;    
+    for(int i = 0; i < ITER_FRAGMENT; i++) {        
+    	d = sea_octave((uv+SEA_TIME)*freq,choppy);
+    	d += sea_octave((uv-SEA_TIME)*freq,choppy);
+        h += d * amp;        
+    	uv *= octave_m; freq *= 1.9; amp *= 0.22;
+        choppy = mix(choppy,1.0,0.2);
+    }
+    return p.y - h;
+}
+// vec3 getSkyColor(vec3 e) {
+//     e.y = (max(e.y,0.0)*0.8+0.2)*0.8;
+//     return vec3(pow(1.0-e.y,2.0), 1.0-e.y, 0.6+(1.0-e.y)*0.4) * 1.1;
+// }
+// vec3 getSeaColor(vec3 p, vec3 n, vec3 l, vec3 eye, vec3 dist) {  
+//     float fresnel = clamp(1.0 - dot(n,-eye), 0.0, 1.0);
+//     fresnel = pow(fresnel,3.0) * 0.5;
+        
+//     vec3 reflected = getSkyColor(reflect(eye,n));    
+//     vec3 refracted = SEA_BASE + diffuse(n,l,80.0) * SEA_WATER_COLOR * 0.12; 
+    
+//     vec3 color = mix(refracted,reflected,fresnel);
+    
+//     float atten = max(1.0 - dot(dist,dist) * 0.001, 0.0);
+//     color += SEA_WATER_COLOR * (p.y - SEA_HEIGHT) * 0.18 * atten;
+    
+//     color += vec3(specular(n,l,eye,60.0));
+    
+//     return color;
+// }
+vec3 get_normal(vec3 p, float eps) {
+    vec3 n;
+    n.y = map_detailed(p);    
+    n.x = map_detailed(vec3(p.x+eps,p.y,p.z)) - n.y;
+    n.z = map_detailed(vec3(p.x,p.y,p.z+eps)) - n.y;
+    n.y = eps;
+    return normalize(n);
+}
+
+vec4 ocean_shader(vec3 ocean_color)
+{
+    vec3 normal = get_normal(v_position, EPSILON);
+    vec3 diffuse_color = ocean_color;
+
+    vec3 light = -normalize(vec3(0.8, 1.0, 0.6));
+    vec3 dir = -v_position;
+
+    // return mix(
+    //     getSkyColor(dir),
+    //     getSeaColor(p,n,light,dir,dir),
+    // 	pow(smoothstep(0.0,-0.02,dir.y),0.2));
+
+    return vec4(phong_light(
+        diffuse_color, 
+        diffuse_color * 0.2, 
+        vec3(1.0, 1.0, 1.0), 
+        normal, 
+        normalize(vec3(0.8, 1.0, 0.6))
+    ), 1.0);
+}
+
 
 vec4 skybox_shader()
 {
+    vec3 pos = normalize(v_position);
+    // pos = normalize(vec3(
+    //     pos.x * sqrt(1.0 - pow(pos.y, 2) / 2.0 - pow(pos.z, 2) / 2.0 + pow(pos.y, 2) * pow(pos.z, 2) / 3.0),
+    //     pos.y * sqrt(1.0 - pow(pos.x, 2) / 2.0 - pow(pos.z, 2) / 2.0 + pow(pos.x, 2) * pow(pos.z, 2) / 3.0),
+    //     pos.z * sqrt(1.0 - pow(pos.x, 2) / 2.0 - pow(pos.y, 2) / 2.0 + pow(pos.x, 2) * pow(pos.y, 2) / 3.0)
+    // ));
     vec3 sun = vec3(1.0, 1.0, 1.0);
     vec3 sun_pos = (normalize(sun) + 1.0) / 2.0;
     vec4 c;
     vec3 res = vec3(2.0, 2.0, 2.0);
-    vec3 st = (normalize(v_model_position) + 1.0) / 2.0;
-    //st *= 10.0;
-    // vec2 ipos = floor(st);
-    // vec2 fpos = fract(st);
-    // float n = noise(st);
+    vec3 st = (normalize(pos) + 1.0) / 2.0;
+    st *= 50.0;
+    vec3 ipos = floor(st);
+    vec3 fpos = fract(st);
+    float n = noise3d(st); // + noise3d(st * 2) * 0.5;// + noise3d(st * 4) * 0.25;
+    float sn = abs(n - 0.5);
+    float radgrad = max(0.0, 1.0 - length(abs(fpos - 0.5)) / sn);
+    radgrad *= radgrad;
+
     // n = n > 0.95 ? n : 0.0;
     // vec3 color = vec3(n);
     if (sphere_sdf(st, sun_pos, 0.02) < 0) {
         c = vec4(0.8118, 0.3922, 0.0, 1.0);
     }
     else {
-        // float v = rand2(vec2(rand2(st.xy), st.z));//(noise3d(st, 50.0) -0.2) * noise3d(st, 1000.0);
+        float v = rand2(vec2(rand2(st.xy), st.z));//(noise3d(st, 50.0) -0.2) * noise3d(st, 1000.0);
 
-        // c = vec4(vec3(v > 0.9985 ? v : 0.0), 1.0);
-        //c = vec4(st, 1.0);
-        c = v_color;
+        //c = vec4(vec3(v > 0.9985 ? v : 0.0), 1.0);
+        c = vec4(vec3(radgrad), 1.0);
+        //c = vec4(pos, 1.0);
     }
 
     return c;
