@@ -4,7 +4,6 @@ use std::thread;
 use std::sync::{Mutex, Arc, RwLock};
 
 use std::collections::HashMap;
-use image::io::Reader as ImageReader;
 
 mod shader;
 mod util;
@@ -12,8 +11,10 @@ mod mesh;
 mod scene_graph;
 mod player;
 mod procedural_planet;
+mod texture;
 
 use procedural_planet as planet;
+use texture::load_texture;
 
 use scene_graph::{SceneNode, SceneNodeType, LightSource, LightSourceType};
 use util::CameraPosition::*;
@@ -34,34 +35,7 @@ const SCREEN_H: u32 = 600;
 
 const POLYMODES: [u32;3] = [gl::FILL, gl::POINT, gl::LINE];
 
-/// Generate a texture binding for an RGBA8 image
-unsafe fn get_texture_id(img: &image::ImageBuffer<image::Rgba<u8>, std::vec::Vec<u8>>) -> u32 {
-    let mut tex_id = 0;
-    gl::GenTextures(1, &mut tex_id);
 
-    gl::BindTexture(gl::TEXTURE_2D, tex_id);
-
-    gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::REPEAT as i32);
-    gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::REPEAT as i32);
-    gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::NEAREST_MIPMAP_LINEAR as i32);
-    gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as i32);
-
-    gl::TexImage2D(
-        gl::TEXTURE_2D,
-        0,
-        gl::RGBA as i32,
-        img.dimensions().0 as i32,
-        img.dimensions().1 as i32,
-        0,
-        gl::RGBA,
-        gl::UNSIGNED_BYTE,
-        util::pointer_to_array(img)
-    );
-
-    gl::GenerateMipmap(gl::TEXTURE_2D);
-
-    tex_id
-}
 
 
 fn main() {
@@ -72,7 +46,8 @@ fn main() {
     let wb = glutin::window::WindowBuilder::new()
         .with_title("Procedural planets")
         .with_resizable(false)
-        .with_inner_size(glutin::dpi::LogicalSize::new(SCREEN_W, SCREEN_H));
+        .with_inner_size(glutin::dpi::LogicalSize::new(SCREEN_W, SCREEN_H))
+        ;
     let cb = glutin::ContextBuilder::new()
         .with_vsync(true);
     let windowed_context = cb.build_windowed(wb, &el).unwrap();
@@ -91,11 +66,13 @@ fn main() {
     // Make a reference of this tuple to send to the render thread
     let mouse_delta = Arc::clone(&arc_mouse_delta);
 
+
     //-------------------------------------------------------------------------/
     // Spawn a separate thread for rendering, so event handling doesn't 
     // block rendering
     //-------------------------------------------------------------------------/
     let render_thread = thread::spawn(move || {
+        let setup_timer = std::time::SystemTime::now();
         // Acquire the OpenGL Context and load the function pointers. This has 
         // to be done inside of the rendering thread, because an active OpenGL 
         // context cannot safely traverse a thread boundary.
@@ -130,14 +107,42 @@ fn main() {
         //---------------------------------------------------------------------/
         let mut conf = util::Config::load();
 
+        let mut player_state = player::PlayerState::Anchored(glm::vec3(0.0, 0.0, 0.0));
+
+        // Basic usage of shader helper:
+        // The example code below returns a shader object, which contains the field `.program_id`.
+        // The snippet is not enough to do the assignment, and will need to be modified (outside of
+        // just using the correct path), but it only needs to be called once
+        //
+        //     shader::ShaderBuilder::new()
+        //        .attach_file("./path/to/shader.file")
+        //        .link();
+        //---------------------------------------------------------------------/
+        // Shaders and locating uniforms
+        //---------------------------------------------------------------------/
+        let v = glm::vec3(1.0, 1.0, 1.0);
+        let timer = std::time::SystemTime::now();
+        print!("Compiling shader . . . ");
+        let sh = unsafe {
+            let sh = shader::ShaderBuilder::new()
+                .attach_file("./resources/shaders/scene.vert")
+                .attach_file("./resources/shaders/scene.frag")
+                .link();
+
+            sh.activate();
+            sh
+        };
+        println!("took {:?}", timer.elapsed());
+
         //---------------------------------------------------------------------/
         // Load charmap texture
         //---------------------------------------------------------------------/
-        let mut charmap = ImageReader::open("resources/textures/charmap.png").unwrap()
-            .decode().unwrap()
-            .flipv()
-            .into_rgba8();
-        let charmap_id = unsafe { get_texture_id(&charmap) };
+        // let mut charmap = ImageReader::open("resources/textures/charmap.png").unwrap()
+        //     .decode().unwrap()
+        //     .flipv()
+        //     .into_rgba8();
+        // let charmap_id = unsafe { get_texture_id(&charmap) };
+        let charmap_id = load_texture("resources/textures/charmap.png");
 
         //---------------------------------------------------------------------/
         // Camera setup (available for keypress handler)
@@ -229,7 +234,7 @@ fn main() {
         // for &n in cubesphere.children.iter() {
         //     mesh::displace_vertices((&mut *n).mesh, size, height, offset);
         // }
-        let subdivisions = 256;
+        let subdivisions = 144;
         let color = glm::vec4(0.2, 0.8, 0.4, 1.0);
 
         // Top
@@ -237,67 +242,73 @@ fn main() {
             glm::vec3(1.0, 1.0, 1.0), 
             glm::vec3(0.0, 0.0, 0.0),
             glm::vec3(0.0, 1.0, 0.0),
-            128, true,
+            subdivisions, true,
             Some(color)
         );
         mesh::displace_vertices(&mut plane0_mesh, size, height, offset);
         let plane0_vao = unsafe { plane0_mesh.mkvao() };
         let mut plane0_node = SceneNode::from_vao(plane0_vao);
+        plane0_node.node_type = SceneNodeType::Planet;
         // Bottom
         let mut plane1_mesh = mesh::Mesh::cs_plane(
             glm::vec3(1.0, 1.0, 1.0), 
             glm::vec3(std::f32::consts::PI, 0.0, 0.0),
             glm::vec3(0.0, -1.0, 0.0),
-            128, true,
+            subdivisions, true,
             Some(color)
         );
         mesh::displace_vertices(&mut plane1_mesh, size, height, offset);
         let plane1_vao = unsafe { plane1_mesh.mkvao() };
         let mut plane1_node = SceneNode::from_vao(plane1_vao);
+        plane1_node.node_type = SceneNodeType::Planet;
         // Front
         let mut plane2_mesh = mesh::Mesh::cs_plane(
             glm::vec3(1.0, 1.0, 1.0), 
             glm::vec3(std::f32::consts::FRAC_PI_2, 0.0, 0.0),
             glm::vec3(0.0, 0.0, 1.0),
-            128, true,
+            subdivisions, true,
             Some(color)
         );
         mesh::displace_vertices(&mut plane2_mesh, size, height, offset);
         let plane2_vao = unsafe { plane2_mesh.mkvao() };
         let mut plane2_node = SceneNode::from_vao(plane2_vao);
+        plane2_node.node_type = SceneNodeType::Planet;
         // Back
         let mut plane3_mesh = mesh::Mesh::cs_plane(
             glm::vec3(1.0, 1.0, 1.0), 
             glm::vec3(-std::f32::consts::FRAC_PI_2, 0.0, 0.0),
             glm::vec3(0.0, 0.0, -1.0),
-            128, true,
+            subdivisions, true,
             Some(color)
         );
         mesh::displace_vertices(&mut plane3_mesh, size, height, offset);
         let plane3_vao = unsafe { plane3_mesh.mkvao() };
         let mut plane3_node = SceneNode::from_vao(plane3_vao);
+        plane3_node.node_type = SceneNodeType::Planet;
         // Left
         let mut plane4_mesh = mesh::Mesh::cs_plane(
             glm::vec3(1.0, 1.0, 1.0), 
             glm::vec3(0.0, 0.0, -std::f32::consts::FRAC_PI_2),
             glm::vec3(1.0, 0.0, 0.0),
-            128, true,
+            subdivisions, true,
             Some(color)
         );
         mesh::displace_vertices(&mut plane4_mesh, size, height, offset);
         let plane4_vao = unsafe { plane4_mesh.mkvao() };
         let mut plane4_node = SceneNode::from_vao(plane4_vao);
+        plane4_node.node_type = SceneNodeType::Planet;
         // Right
         let mut plane5_mesh = mesh::Mesh::cs_plane(
             glm::vec3(1.0, 1.0, 1.0), 
             glm::vec3(0.0, 0.0, std::f32::consts::FRAC_PI_2),
             glm::vec3(-1.0, 0.0, 0.0),
-            128, true,
+            subdivisions, true,
             Some(color)
         );
         mesh::displace_vertices(&mut plane5_mesh, size, height, offset);
         let plane5_vao = unsafe { plane5_mesh.mkvao() };
         let mut plane5_node = SceneNode::from_vao(plane5_vao);
+        plane5_node.node_type = SceneNodeType::Planet;
                 
         cubesphere.add_child(&plane0_node);
         cubesphere.add_child(&plane1_node);
@@ -310,7 +321,7 @@ fn main() {
 
         // Create cubesphere
         let mut cs_ocean = SceneNode::with_type(SceneNodeType::Empty);
-        cs_ocean.scale *= 10.0;
+        cs_ocean.scale *= 10.001;
         let size = 10.0;
         let height = 0.05;
         let offset = 0.0;
@@ -423,12 +434,12 @@ fn main() {
         text_title_node.position = glm::vec3(-0.5, 0.7, 0.0);
         text_title_node.scale = glm::vec3(1.0, 1.0, 1.0);
 
-        let mut text_pos_mesh = mesh::Mesh::text_buffer("..", 49.0 / 29.0, 1.0);
+        let mut text_pos_mesh = mesh::Mesh::text_buffer(".", 49.0 / 29.0, 1.0);
         let mut text_pos_node = SceneNode::from_vao(unsafe { text_pos_mesh.mkvao() });
         text_pos_node.node_type = SceneNodeType::Geometry2d;
         text_pos_node.texture_id = Some(charmap_id);
         text_pos_node.position = glm::vec3(-1.0, -1.0, 0.0);
-        text_pos_node.scale = glm::vec3(1.0, 1.0, 1.0);
+        text_pos_node.scale = glm::vec3(1.0, 1.0, 1.0) * 0.9;
 
 
 
@@ -450,39 +461,9 @@ fn main() {
         gui_root.add_child(&text_title_node);
         gui_root.add_child(&text_pos_node);
 
-        // Basic usage of shader helper:
-        // The example code below returns a shader object, which contains the field `.program_id`.
-        // The snippet is not enough to do the assignment, and will need to be modified (outside of
-        // just using the correct path), but it only needs to be called once
-        //
-        //     shader::ShaderBuilder::new()
-        //        .attach_file("./path/to/shader.file")
-        //        .link();
-        //---------------------------------------------------------------------/
-        // Shaders and locating uniforms
-        //---------------------------------------------------------------------/
-        let sh = unsafe {
-            let sh = shader::ShaderBuilder::new()
-                .attach_file("./resources/shaders/scene.vert")
-                .attach_file("./resources/shaders/scene.frag")
-                .link();
-
-            sh.activate();
-            sh
-        };
-
         //---------------------------------------------------------------------/
         // Uniform values
         //---------------------------------------------------------------------/
-        let aspect: f32 = SCREEN_W as f32 / SCREEN_H as f32;
-        let fovy = conf.fov;
-        let perspective_mat: glm::Mat4 = 
-            glm::perspective(
-                aspect,         // aspect
-                fovy,           // fovy
-                conf.clip_near, // near
-                conf.clip_far   // far
-            );
         let mut timestamp = 0.0;
         let timestep = 0.001;
 
@@ -496,6 +477,7 @@ fn main() {
         let mut key_debounce: HashMap<VirtualKeyCode, u32> = HashMap::new();
 
         // The main rendering loop
+        eprintln!("Setup done in {:?}. Starting rendering loop.", setup_timer.elapsed().unwrap());
         loop {
             let now = std::time::Instant::now();
             let elapsed = now.duration_since(first_frame_time).as_secs_f32();
@@ -510,6 +492,11 @@ fn main() {
             //-----------------------------------------------------------------/
             if let Ok(keys) = pressed_keys.lock() {
                 for key in keys.iter() {
+                    use player::PlayerState::*;
+                    let up = match player_state {
+                        Anchored(a) => glm::normalize(&(position - a)),
+                        FreeFloat => glm::cross(&direction, &right),
+                    };
                     let flat_direction =  glm::normalize(&glm::vec3(direction.x, 0.0, direction.z));
                     // Set movement relative to helicopter rotation
                     // let heli_direction = util::vec_direction(heli_body_nodes[n_helis].rotation.y, 0.0);
@@ -519,43 +506,66 @@ fn main() {
                     match key {
                         /* Move left/right */
                         VirtualKeyCode::A => {
-                            // //heli_body_nodes[n_helis].rotation.z = 0.2;
                             // tilt_dir.1 = 1;
                             // heli_body_nodes[n_helis].position -= right * delta_time * movement_speed;
-                            position -= right * delta_time * movement_speed;
+                            // position -= right * delta_time * movement_speed;
+                            position -= match player_state {
+                                FreeFloat => right * delta_time * movement_speed,
+                                Anchored(a) => right * delta_time * movement_speed,
+                            }
                         },
                         VirtualKeyCode::D => {
-                            // heli_body_nodes[n_helis].rotation.z = -0.2;
-                            // tilt_dir.1 = -1;
                             // heli_body_nodes[n_helis].position += right * delta_time * movement_speed;
-                            position += right * delta_time * movement_speed;
+                            // position += right * delta_time * movement_speed;
+                            position += match player_state {
+                                FreeFloat => right * delta_time * movement_speed,
+                                Anchored(a) => right * delta_time * movement_speed,
+                            }
                         },
                         /* Move forward (inward)/backward, in camera direction */
                         VirtualKeyCode::W => {
-                            // heli_body_nodes[n_helis].rotation.x = -0.2;
-                            // tilt_dir.0 = -1;
                             // heli_body_nodes[n_helis].position += flat_direction * delta_time * movement_speed;
-                            position += direction * delta_time * movement_speed;
+                            // position += direction * delta_time * movement_speed;
+                            position += match player_state {
+                                FreeFloat => direction * delta_time * movement_speed,
+                                Anchored(a) => direction * delta_time * movement_speed,
+                            }
                         },
                         VirtualKeyCode::S => {
-                            // heli_body_nodes[n_helis].rotation.x = 0.2;
-                            // tilt_dir.0 = 1;
                             // heli_body_nodes[n_helis].position -= flat_direction * delta_time * movement_speed;
-                            position -= direction * delta_time * movement_speed;
+                            // position -= direction * delta_time * movement_speed;
+                            position -= match player_state {
+                                FreeFloat => direction * delta_time * movement_speed,
+                                Anchored(a) => direction * delta_time * movement_speed,
+                            }
                         },
                         /* Move up/down */
                         VirtualKeyCode::Space => {
-                            // heli_body_nodes[n_helis].position += glm::vec3(0.0, 1.0, 0.0) * delta_time * movement_speed;
-                            position += glm::vec3(0.0, 1.0, 0.0) * delta_time * movement_speed;
+                            position += up * delta_time * movement_speed
                         },
                         VirtualKeyCode::LShift => {
-                            // heli_body_nodes[n_helis].position -= glm::vec3(0.0, 1.0, 0.0) * delta_time * movement_speed;
-                            position -= glm::vec3(0.0, 1.0, 0.0) * delta_time * movement_speed;
+                            position -= up * delta_time * movement_speed
                         },
                         VirtualKeyCode::M => {
                             let v = key_debounce.entry(VirtualKeyCode::M).or_insert(0);
                             if *v == 0 {
                                 conf.polymode = (conf.polymode + 1) % 3;
+                                *v = 10;
+                            }
+                        },
+                        VirtualKeyCode::F => {
+                            let v = key_debounce.entry(VirtualKeyCode::F).or_insert(0);
+                            if *v == 0 {
+                                use player::PlayerState::*;
+                                player_state = match player_state {
+                                    FreeFloat => {
+                                        let a = glm::vec3(0.0, 0.0, 0.0);
+                                        let up = glm::normalize(&(position - a));
+                                        right = glm::cross(&direction, &up);
+                                        Anchored(a)  // Later: anchor to closest planet
+                                    },
+                                    Anchored(_) => FreeFloat
+                                };
                                 *v = 10;
                             }
                         }
@@ -579,8 +589,22 @@ fn main() {
             }
 
             skybox_node.position = position;
-            text_pos_mesh = mesh::Mesh::text_buffer(&format!("position: {:.3},{:.3},{:.3}", position.x, position.y, position.z), 49.0 / 29.0, 1.0);
+            // Log position
+            text_pos_mesh = mesh::Mesh::text_buffer(
+                &format!("global position: {:.3},{:.3},{:.3}", position.x, position.y, position.z),
+                49.0 / 29.0, 1.0
+            );
             text_pos_node.update_buffers(&text_pos_mesh);
+
+            let wsize = context.window().inner_size();
+
+            let mut perspective_mat: glm::Mat4 = glm::perspective(
+                //*aspect.read().unwrap(),         // aspect
+                wsize.width as f32 / wsize.height as f32,
+                conf.fov,       // field of view
+                conf.clip_near, // near
+                conf.clip_far   // far
+            );
 
             //-------------------------------------------------------------/
             // Draw section
@@ -642,6 +666,9 @@ fn main() {
             Event::WindowEvent { event: WindowEvent::CloseRequested, .. } => {
                 *control_flow = ControlFlow::Exit;
             },
+            Event::WindowEvent { event: WindowEvent::Resized(size), .. } => {
+                println!("Resized window to {} x {}", size.width, size.height);
+            }
             // Keep track of currently pressed keys to send to the rendering thread
             Event::WindowEvent { event: WindowEvent::KeyboardInput {
                 input: KeyboardInput { state: key_state, virtual_keycode: Some(keycode), .. }, .. }, .. } => {

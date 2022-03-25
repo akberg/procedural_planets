@@ -387,7 +387,6 @@ impl Mesh {
         let mut texture = vec![glm::vec2(0.0, 0.0); vertex_count];
         let mut indices = vec![0; index_count];
 
-
         for z in 0..res {
             for x in 0..res {
                 // Transform position
@@ -400,25 +399,9 @@ impl Mesh {
                 pos = glm::rotate_y_vec3(&pos, rotation.y);
                 pos = glm::rotate_z_vec3(&pos, rotation.z);
                 pos += position;
-                // Side of cubesphere
-                // vertices[z * res + x] = glm::vec3(
-                //     posx * (1.0 - posy.powi(2) / 2.0 - posz.powi(2) / 2.0 + posy.powi(2) * posz.powi(2) / 3.0).sqrt(),
-                //     posy * (1.0 - posx.powi(2) / 2.0 - posz.powi(2) / 2.0 + posx.powi(2) * posz.powi(2) / 3.0).sqrt(),
-                //     posz * (1.0 - posx.powi(2) / 2.0 - posy.powi(2) / 2.0 + posx.powi(2) * posy.powi(2) / 3.0).sqrt(),
-                // ).component_mul(&scale) * 0.5;
                 // Flat plane
                 vertices[z * res + x] = pos.component_mul(&scale) * 0.5;
-                // vertices[z * res + x] = glm::vec3(
-                //     2.0 * x as f32 / res as f32 - 1.0,
-                //     0.0,
-                //     2.0 * z as f32 / res as f32 - 1.0,
-                // ).component_mul(&scale) * 0.5;
-                // Waves
-                // vertices[y * res + x] = glm::vec3(
-                //     2.0 * x as f32 / res as f32 - 1.0,
-                //     ((2.0 * x as f32 / res as f32 - 1.0)*10.0).sin() / 10.0 + ((2.0 * y as f32 / res as f32 - 1.0)*10.0).sin() / 10.0,
-                //     2.0 * y as f32 / res as f32 - 1.0,
-                // ).component_mul(&scale) * 0.5;
+
                 texture[z * res + x] = glm::vec2(
                     x as f32 / res as f32,
                     z as f32 / res as f32,
@@ -456,6 +439,8 @@ impl Mesh {
         let res = 1 + subdivisions;
         let vertex_count = res * res;
         let index_count = 6 * (res-1) * (res-1);
+        let timer = std::time::SystemTime::now();
+        eprint!("Constructing CS plane with {} vertices . . . ", vertex_count);
         let mut vertices = vec![glm::vec3(0.0, 0.0, 0.0); vertex_count];
         let mut normals = vec![glm::vec3(0.0, 1.0, 0.0); vertex_count];
         let mut texture = vec![glm::vec2(0.0, 0.0); vertex_count];
@@ -501,6 +486,7 @@ impl Mesh {
             }
         }
 
+        eprintln!("took {:?}", timer.elapsed().unwrap());
         Mesh {
             vertices: from_array_of_vec3(vertices),
             normals: from_array_of_vec3(normals),
@@ -599,6 +585,8 @@ fn fractal_noise(generator: Perlin, point: &glm::TVec3<f32>, size: f64, height: 
 
 // TODO: Interpolated height colours (noise-rs probably has it already)
 pub fn displace_vertices(mesh: &mut Mesh, size: f64, height: f32, offset: f32) {
+    let timer = std::time::SystemTime::now();
+    eprint!("Generating noise . . . ");
     let mut vertices = to_array_of_vec3(mesh.vertices.clone());
     let perlin = Perlin::new();
     // let fbm = Fbm::new();
@@ -621,6 +609,7 @@ pub fn displace_vertices(mesh: &mut Mesh, size: f64, height: f32, offset: f32) {
     }
     mesh.normals = from_array_of_vec3(normals);
     mesh.vertices = from_array_of_vec3(vertices);
+    println!("took {:?}", timer.elapsed().unwrap());
 }
 
 

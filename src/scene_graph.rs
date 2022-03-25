@@ -47,7 +47,7 @@ pub enum SceneNodeType {
     Planet = 3,
     Ocean = 4,
     LightSource,
-    Empty,
+    Empty,          // "Empty" i.e. don't draw
 }
 
 pub struct SceneNode {
@@ -250,7 +250,7 @@ impl SceneNode {
         }
     }
 
-    pub fn update_buffers(&self, mesh: &mesh::Mesh) {
+    pub fn update_buffers(&mut self, mesh: &mesh::Mesh) {
         unsafe { self.update_vertex_buffer(mesh) };
         unsafe { self.update_normal_buffer(mesh) };
         unsafe { self.update_texture_buffer(mesh) };
@@ -268,7 +268,7 @@ impl SceneNode {
                         vbuf_data as *const _,
                         gl::STATIC_DRAW); 
     }
-    pub unsafe fn update_index_buffer(&self, mesh: &mesh::Mesh) {
+    pub unsafe fn update_index_buffer(&mut self, mesh: &mesh::Mesh) {
         gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, self.vao.ibo);
 
         let ibuf_size = util::byte_size_of_array(&mesh.indices);
@@ -278,6 +278,7 @@ impl SceneNode {
                     ibuf_size,
                     ibuf_data as *const _,
                     gl::STATIC_DRAW);
+        self.index_count = mesh.index_count;
     }
     pub unsafe fn update_normal_buffer(&self, mesh: &mesh::Mesh) {
         gl::BindVertexArray(self.vao.vao);

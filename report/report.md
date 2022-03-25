@@ -20,6 +20,11 @@ toc: true
 # Showcase
 
 # Log
+* 25.3:
+    * Failed to support resizable window, will return to this later.
+    * Fixed some bug in `SceneNode::update\_buffers`
+    * Stress tested a planet with 2048 subdivisions per plane, ~30s each to generate, chokes the GPU. Adds motivation for implementing quad-tree in order to get adequate LoD close to the ground.
+    * Begin thinking about planet implementation and switching player state between floating and anchored to a planet.
 * 24.3:
     * Add some primitive height colouring in shader as proof of concept/testing
 * 22.3:
