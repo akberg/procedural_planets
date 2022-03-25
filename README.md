@@ -6,7 +6,8 @@
 ![Added noise to displace the vertices](report/images/cubesphere-w-vertex-noise.png)
 ![Computed normals, but struggling with seams](report/images/cubesphere-w-noise-normal-seam.png)
 ![Apply noise and add an additional sphere as an ocean](report/images/red-planet-w-ocean.png)
-![Playing with adding a height depentend colour map](report/images/planet-w-cheated-heightmap.png)
+![Playing with adding a height dependent colour map](report/images/planet-w-cheated-heightmap.png)
+![Ocean and skybox](report/images/planet-skybox-ocean.png)
 
 ## Project description: Procedurally generated planet
 
@@ -55,6 +56,13 @@ Multi-dimensional https://www.sciencedirect.com/science/article/pii/S00219991130
 Icosphere: http://blog.andreaskahler.com/2009/06/creating-icosphere-mesh-in-code.html
 
 Cubesphere, source for math: https://catlikecoding.com/unity/tutorials/cube-sphere/
+
+Skybox: https://www.overdraw.xyz/blog/2018/7/17/using-cellular-noise-to-generate-procedural-stars
+
+Ocean: https://www.shadertoy.com/view/Ms2SD1
+
+Hash functions: https://www.shadertoy.com/view/4djSRW
+
 
 
 ## Timeline
