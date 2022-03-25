@@ -20,6 +20,8 @@ toc: true
 # Showcase
 
 # Log
+* 24.3:
+    * Add some primitive height colouring in shader as proof of concept/testing
 * 22.3:
     * Solved issue with texture loading, can now display text.
     * Some refactoring of vao handling mesh/scene_graph
