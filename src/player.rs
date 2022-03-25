@@ -8,6 +8,7 @@ pub enum PlayerState { FreeFloat, Anchored(glm::TVec3<f32>) }
 pub struct Player {
     pub position: glm::TVec3<f32>,
     pub direction: glm::TVec3<f32>,
+    pub state: PlayerState,
 
     pub closest_planet_id: i32,
 }

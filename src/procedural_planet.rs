@@ -19,14 +19,16 @@ use nalgebra_glm as glm;
 /// scene_root.add_child(planet0.node);
 /// ```
 pub struct Planet {
-    pub position: glm::TVec3<f32>,
-    pub rotation: glm::TVec3<f32>,
+    pub node        : crate::scene_graph::Node,
+    pub position    : glm::TVec3<f32>,
+    pub rotation    : glm::TVec3<f32>,
 
-    pub radius: f32,                // Radius to ocean level
-    pub emission: glm::TVec3<f32>,  // Emission colour and intensity
-    pub has_ocean: bool,            // Set false to 
+    pub radius      : f32,              // Radius to ocean level
+    pub emission    : glm::TVec3<f32>,  // Emission colour and intensity
+    pub has_ocean   : bool,             // Set true to include ocean
+    pub ocean_lvl   : f32,              // 
 
-    pub noise_fn: dyn noise::NoiseFn<[f32;3]>,
+    pub noise_fn    : dyn noise::NoiseFn<[f32;3]>,
 
 }
 
