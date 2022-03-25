@@ -5,6 +5,8 @@ layout (binding = 0) uniform sampler2D u_texture;
 #define NODE_TYPE_GEOMETRY      0
 #define NODE_TYPE_SKYBOX        1
 #define NODE_TYPE_GEOMETRY2D    2
+#define NODE_TYPE_PLANET        3
+#define NODE_TYPE_OCEAN         4
 
 in vec3 v_position;
 in vec4 v_color;
@@ -129,6 +131,8 @@ void main()
     //color = vec4(1.0, 0.1, 0.9, 1.0);
     switch (u_node_type) {
     case NODE_TYPE_GEOMETRY:
+    case NODE_TYPE_PLANET:
+    case NODE_TYPE_OCEAN:
         color = planet_shader();
         break;
     case NODE_TYPE_SKYBOX:
@@ -149,13 +153,37 @@ vec4 planet_shader()
     // Normal noise
     vec3 normal = v_normal;
 
+    // Simple height map
+    float radius = 10.0;
+    float h = (length(v_position) - 0.5) * 2.0;
+    vec3 diffuse_color = v_color.rgb;
+    if (u_node_type == NODE_TYPE_PLANET) {
+        if (h < -0.0001) {
+            diffuse_color = vec3(0.4, 0.4, 0.3);
+        }
+        // else if (h > -0.001 && h < 0.001) {
+        //     diffuse_color = vec3(0.2, 0.2, 0.7);
+        // }
+        else if (h < 0.001) {
+            diffuse_color = vec3(0.7, 0.55, 0.0);
+        }
+        else if (h < 0.014) {
+            diffuse_color = vec3(0.2, 0.6, 0.4);
+        }
+        else if (h < 0.024) {
+            diffuse_color = vec3(0.5, 0.4, 0.4);
+        }
+        else {
+            diffuse_color = vec3(1.0, 1.0, 1.0);
+        }
+    }
     // Lighting
     vec4 color;
     vec3 light = normalize(vec3(0.8, 1.0, 0.6));
-    vec3 ambient_color = v_color.rgb * 0.1; //vec3(0.1, 0.05, 0.1);
+    vec3 ambient_color = diffuse_color.rgb * 0.1; //vec3(0.1, 0.05, 0.1);
     vec3 specular_color = vec3(0.5, 0.2, 0.1);
     //vec3 diffuse_color = vec3(0.7, 0.7, 0.7);
-    vec3 diffuse_color = 0.7 * v_color.rgb;//(normal.rgb + 1.0) / 2.0;// * max(0, dot(v_normal, -light));
+    //vec3 diffuse_color = 0.7 * v_color.rgb;//(normal.rgb + 1.0) / 2.0;// * max(0, dot(v_normal, -light));
 
     float diffuse = max(dot(normalize(normal), normalize(light)), 0.0);
     vec3 camera_dir = normalize(-v_position);
@@ -166,8 +194,8 @@ vec4 planet_shader()
     //color = vec4(v_color.rgb * max(0, dot(v_normal, -light)), v_color.a);
     color = vec4(ambient_color + diffuse * diffuse_color + specular * specular_color, v_color.a);
     // Colour using normals
-    float minr = 0.6;
-    float radius = 0.9-minr;
+    // float minr = 0.6;
+    // float radius = 0.9-minr;
     //color = vec4(vec3((normalize(v_position) + 1.0) / 2.0) * (length(v_position)-minr) / radius, 1.0);
     //color = vec4(vec2(noise3d(v_normal, 10.0)), 1.0, 1.0);
     return color;

@@ -44,6 +44,8 @@ pub enum SceneNodeType {
     Geometry = 0,
     Skybox = 1,
     Geometry2d = 2,         // For gui
+    Planet = 3,
+    Ocean = 4,
     LightSource,
     Empty,
 }
@@ -169,6 +171,7 @@ impl SceneNode {
         );
     }
 
+    /// Update node transformations and accumulate global uniforms
     pub unsafe fn update_node_transformations(
         &mut self,
         transformation_so_far: &glm::Mat4
@@ -209,6 +212,8 @@ impl SceneNode {
         match self.node_type {
         SceneNodeType::Geometry | 
         SceneNodeType::Geometry2d | 
+        SceneNodeType::Planet | 
+        SceneNodeType::Ocean |
         SceneNodeType::Skybox => {
             gl::BindVertexArray(self.vao.vao);
         
@@ -245,9 +250,14 @@ impl SceneNode {
         }
     }
 
+    pub fn update_buffers(&self, mesh: &mesh::Mesh) {
+        unsafe { self.update_vertex_buffer(mesh) };
+        unsafe { self.update_normal_buffer(mesh) };
+        unsafe { self.update_texture_buffer(mesh) };
+        unsafe { self.update_index_buffer(mesh) };
+    }
     pub unsafe fn update_vertex_buffer(&self, mesh: &mesh::Mesh) {
         gl::BindVertexArray(self.vao.vao);
-        // TODO: Implement
         gl::BindBuffer(gl::ARRAY_BUFFER, self.vao.vbo);
         
         let vbuf_size = util::byte_size_of_array(&mesh.vertices);
@@ -258,9 +268,19 @@ impl SceneNode {
                         vbuf_data as *const _,
                         gl::STATIC_DRAW); 
     }
+    pub unsafe fn update_index_buffer(&self, mesh: &mesh::Mesh) {
+        gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, self.vao.ibo);
+
+        let ibuf_size = util::byte_size_of_array(&mesh.indices);
+        let ibuf_data = util::pointer_to_array(&mesh.indices);
+
+        gl::BufferData(gl::ELEMENT_ARRAY_BUFFER,
+                    ibuf_size,
+                    ibuf_data as *const _,
+                    gl::STATIC_DRAW);
+    }
     pub unsafe fn update_normal_buffer(&self, mesh: &mesh::Mesh) {
         gl::BindVertexArray(self.vao.vao);
-        // TODO: Implement
         gl::BindBuffer(gl::ARRAY_BUFFER, self.vao.nbo);
         
         let nbuf_size = util::byte_size_of_array(&mesh.normals);
@@ -273,7 +293,6 @@ impl SceneNode {
     }
     pub unsafe fn update_texture_buffer(&self, mesh: &mesh::Mesh) {
         gl::BindVertexArray(self.vao.vao);
-        // TODO: Implement
         gl::BindBuffer(gl::ARRAY_BUFFER, self.vao.texbo);
         
         let tbuf_size = util::byte_size_of_array(&mesh.texture_coordinates);
@@ -283,6 +302,95 @@ impl SceneNode {
                         tbuf_size,
                         tbuf_data as *const _,
                         gl::STATIC_DRAW); 
+    }
+
+    /// Generate composite mesh cubesphere
+    pub fn make_cubesphere(
+        scale: glm::TVec3<f32>,
+        rotation: glm::TVec3<f32>,
+        position: glm::TVec3<f32>,
+        subdivisions: usize,
+        color: Option<glm::TVec4<f32>>
+    ) -> Node {
+        let mut cubesphere = SceneNode::with_type(SceneNodeType::Empty);
+        cubesphere.scale = scale;
+        let subdivisions = 256;
+        let color = glm::vec4(0.2, 0.8, 0.4, 1.0);
+
+        // Top
+        let mut plane0_mesh = mesh::Mesh::cs_plane(
+            glm::vec3(1.0, 1.0, 1.0), 
+            glm::vec3(0.0, 0.0, 0.0),
+            glm::vec3(0.0, 1.0, 0.0),
+            subdivisions, true,
+            Some(color)
+        );
+        let plane0_vao = unsafe { plane0_mesh.mkvao() };
+        let mut plane0_node = SceneNode::from_vao(plane0_vao);
+        plane0_node.node_type = SceneNodeType::Planet;
+        // Bottom
+        let mut plane1_mesh = mesh::Mesh::cs_plane(
+            glm::vec3(1.0, 1.0, 1.0), 
+            glm::vec3(std::f32::consts::PI, 0.0, 0.0),
+            glm::vec3(0.0, -1.0, 0.0),
+            subdivisions, true,
+            Some(color)
+        );
+        let plane1_vao = unsafe { plane1_mesh.mkvao() };
+        let mut plane1_node = SceneNode::from_vao(plane1_vao);
+        plane1_node.node_type = SceneNodeType::Planet;
+        // Front
+        let mut plane2_mesh = mesh::Mesh::cs_plane(
+            glm::vec3(1.0, 1.0, 1.0), 
+            glm::vec3(std::f32::consts::FRAC_PI_2, 0.0, 0.0),
+            glm::vec3(0.0, 0.0, 1.0),
+            subdivisions, true,
+            Some(color)
+        );
+        let plane2_vao = unsafe { plane2_mesh.mkvao() };
+        let mut plane2_node = SceneNode::from_vao(plane2_vao);
+        plane2_node.node_type = SceneNodeType::Planet;
+        // Back
+        let mut plane3_mesh = mesh::Mesh::cs_plane(
+            glm::vec3(1.0, 1.0, 1.0), 
+            glm::vec3(-std::f32::consts::FRAC_PI_2, 0.0, 0.0),
+            glm::vec3(0.0, 0.0, -1.0),
+            subdivisions, true,
+            Some(color)
+        );
+        let plane3_vao = unsafe { plane3_mesh.mkvao() };
+        let mut plane3_node = SceneNode::from_vao(plane3_vao);
+        plane3_node.node_type = SceneNodeType::Planet;
+        // Left
+        let mut plane4_mesh = mesh::Mesh::cs_plane(
+            glm::vec3(1.0, 1.0, 1.0), 
+            glm::vec3(0.0, 0.0, -std::f32::consts::FRAC_PI_2),
+            glm::vec3(1.0, 0.0, 0.0),
+            subdivisions, true,
+            Some(color)
+        );
+        let plane4_vao = unsafe { plane4_mesh.mkvao() };
+        let mut plane4_node = SceneNode::from_vao(plane4_vao);
+        plane4_node.node_type = SceneNodeType::Planet;
+        // Right
+        let mut plane5_mesh = mesh::Mesh::cs_plane(
+            glm::vec3(1.0, 1.0, 1.0), 
+            glm::vec3(0.0, 0.0, std::f32::consts::FRAC_PI_2),
+            glm::vec3(-1.0, 0.0, 0.0),
+            subdivisions, true,
+            Some(color)
+        );
+        let plane5_vao = unsafe { plane5_mesh.mkvao() };
+        let mut plane5_node = SceneNode::from_vao(plane5_vao);
+        plane5_node.node_type = SceneNodeType::Planet;
+        
+        cubesphere.add_child(&plane0_node);
+        cubesphere.add_child(&plane1_node);
+        cubesphere.add_child(&plane2_node);
+        cubesphere.add_child(&plane3_node);
+        cubesphere.add_child(&plane4_node);
+        cubesphere.add_child(&plane5_node);
+        cubesphere
     }
 }
 

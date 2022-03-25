@@ -10,6 +10,10 @@ mod shader;
 mod util;
 mod mesh;
 mod scene_graph;
+mod player;
+mod procedural_planet;
+
+use procedural_planet as planet;
 
 use scene_graph::{SceneNode, SceneNodeType, LightSource, LightSourceType};
 use util::CameraPosition::*;
@@ -66,7 +70,7 @@ fn main() {
     //-------------------------------------------------------------------------/
     let el = glutin::event_loop::EventLoop::new();
     let wb = glutin::window::WindowBuilder::new()
-        .with_title("Gloom-rs")
+        .with_title("Procedural planets")
         .with_resizable(false)
         .with_inner_size(glutin::dpi::LogicalSize::new(SCREEN_W, SCREEN_H));
     let cb = glutin::ContextBuilder::new()
@@ -209,12 +213,22 @@ fn main() {
 
 
         // TODO: Make this more elegant:
-
-        let mut cubesphere = SceneNode::with_type(SceneNodeType::Empty);
-        cubesphere.scale *= 10.0;
+        // FIXME
         let size = 10.0;
         let height = 0.05;
         let offset = 0.0;
+        // let mut cubesphere = SceneNode::make_cubesphere(
+        //     glm::vec3(10.0, 10.0, 10.0), 
+        //     glm::vec3(0.0, 0.0, 0.0), 
+        //     glm::vec3(0.0, 0.0, 0.0), 
+        //     32,
+        //     None
+        // );
+        let mut cubesphere = SceneNode::with_type(SceneNodeType::Empty);
+        cubesphere.scale *= 10.0;
+        // for &n in cubesphere.children.iter() {
+        //     mesh::displace_vertices((&mut *n).mesh, size, height, offset);
+        // }
         let subdivisions = 256;
         let color = glm::vec4(0.2, 0.8, 0.4, 1.0);
 
@@ -291,12 +305,16 @@ fn main() {
         cubesphere.add_child(&plane3_node);
         cubesphere.add_child(&plane4_node);
         cubesphere.add_child(&plane5_node);
+        // Cubesphere creation done
+        
 
+        // Create cubesphere
         let mut cs_ocean = SceneNode::with_type(SceneNodeType::Empty);
+        cs_ocean.scale *= 10.0;
         let size = 10.0;
         let height = 0.05;
         let offset = 0.0;
-        let subdivisions = 32;
+        let subdivisions = 16;
         let color = glm::vec4(0.1, 0.3, 0.8, 0.8);
 
         // Top
@@ -304,67 +322,73 @@ fn main() {
             glm::vec3(1.0, 1.0, 1.0), 
             glm::vec3(0.0, 0.0, 0.0),
             glm::vec3(0.0, 1.0, 0.0),
-            128, true,
+            subdivisions, true,
             Some(color)
         );
         // mesh::displace_vertices(&mut plane0_mesh, size, height, offset);
         let plane0_vao = unsafe { plane0_mesh.mkvao() };
         let mut plane0_node = SceneNode::from_vao(plane0_vao);
+        plane0_node.node_type = SceneNodeType::Ocean;
         // Bottom
         let mut plane1_mesh = mesh::Mesh::cs_plane(
             glm::vec3(1.0, 1.0, 1.0), 
             glm::vec3(std::f32::consts::PI, 0.0, 0.0),
             glm::vec3(0.0, -1.0, 0.0),
-            128, true,
+            subdivisions, true,
             Some(color)
         );
         // mesh::displace_vertices(&mut plane1_mesh, size, height, offset);
         let plane1_vao = unsafe { plane1_mesh.mkvao() };
         let mut plane1_node = SceneNode::from_vao(plane1_vao);
+        plane1_node.node_type = SceneNodeType::Ocean;
         // Front
         let mut plane2_mesh = mesh::Mesh::cs_plane(
             glm::vec3(1.0, 1.0, 1.0), 
             glm::vec3(std::f32::consts::FRAC_PI_2, 0.0, 0.0),
             glm::vec3(0.0, 0.0, 1.0),
-            128, true,
+            subdivisions, true,
             Some(color)
         );
         // mesh::displace_vertices(&mut plane2_mesh, size, height, offset);
         let plane2_vao = unsafe { plane2_mesh.mkvao() };
         let mut plane2_node = SceneNode::from_vao(plane2_vao);
+        plane2_node.node_type = SceneNodeType::Ocean;
         // Back
         let mut plane3_mesh = mesh::Mesh::cs_plane(
             glm::vec3(1.0, 1.0, 1.0), 
             glm::vec3(-std::f32::consts::FRAC_PI_2, 0.0, 0.0),
             glm::vec3(0.0, 0.0, -1.0),
-            128, true,
+            subdivisions, true,
             Some(color)
         );
         // mesh::displace_vertices(&mut plane3_mesh, size, height, offset);
         let plane3_vao = unsafe { plane3_mesh.mkvao() };
         let mut plane3_node = SceneNode::from_vao(plane3_vao);
+        plane3_node.node_type = SceneNodeType::Ocean;
         // Left
         let mut plane4_mesh = mesh::Mesh::cs_plane(
             glm::vec3(1.0, 1.0, 1.0), 
             glm::vec3(0.0, 0.0, -std::f32::consts::FRAC_PI_2),
             glm::vec3(1.0, 0.0, 0.0),
-            128, true,
+            subdivisions, true,
             Some(color)
         );
         // mesh::displace_vertices(&mut plane4_mesh, size, height, offset);
         let plane4_vao = unsafe { plane4_mesh.mkvao() };
         let mut plane4_node = SceneNode::from_vao(plane4_vao);
+        plane4_node.node_type = SceneNodeType::Ocean;
         // Right
         let mut plane5_mesh = mesh::Mesh::cs_plane(
             glm::vec3(1.0, 1.0, 1.0), 
             glm::vec3(0.0, 0.0, std::f32::consts::FRAC_PI_2),
             glm::vec3(-1.0, 0.0, 0.0),
-            128, true,
+            subdivisions, true,
             Some(color)
         );
         // mesh::displace_vertices(&mut plane5_mesh, size, height, offset);
         let plane5_vao = unsafe { plane5_mesh.mkvao() };
         let mut plane5_node = SceneNode::from_vao(plane5_vao);
+        plane5_node.node_type = SceneNodeType::Ocean;
 
 
         // let mut plane5_node = SceneNode::with_type(SceneNodeType::Empty);
@@ -386,7 +410,7 @@ fn main() {
         cs_ocean.add_child(&plane3_node);
         cs_ocean.add_child(&plane4_node);
         cs_ocean.add_child(&plane5_node);
-        cs_ocean.scale *= 10.001;
+        // Cubesphere creation done
 
         // let part_plane = mesh::Mesh::cs_part_plane(glm::vec3(-1.0, 0.0, 1.0), glm::vec3(1.0, 0.0, -1.0), 64, true);
         // let pplane_vao = unsafe { mkvao(&part_plane) };
@@ -398,6 +422,14 @@ fn main() {
         text_title_node.texture_id = Some(charmap_id);
         text_title_node.position = glm::vec3(-0.5, 0.7, 0.0);
         text_title_node.scale = glm::vec3(1.0, 1.0, 1.0);
+
+        let mut text_pos_mesh = mesh::Mesh::text_buffer("..", 49.0 / 29.0, 1.0);
+        let mut text_pos_node = SceneNode::from_vao(unsafe { text_pos_mesh.mkvao() });
+        text_pos_node.node_type = SceneNodeType::Geometry2d;
+        text_pos_node.texture_id = Some(charmap_id);
+        text_pos_node.position = glm::vec3(-1.0, -1.0, 0.0);
+        text_pos_node.scale = glm::vec3(1.0, 1.0, 1.0);
+
 
 
         //---------------------------------------------------------------------/
@@ -416,6 +448,7 @@ fn main() {
 
         let mut gui_root = SceneNode::new();
         gui_root.add_child(&text_title_node);
+        gui_root.add_child(&text_pos_node);
 
         // Basic usage of shader helper:
         // The example code below returns a shader object, which contains the field `.program_id`.
@@ -482,7 +515,7 @@ fn main() {
                     // let heli_direction = util::vec_direction(heli_body_nodes[n_helis].rotation.y, 0.0);
                     // let flat_direction = -heli_direction; //glm::normalize(&glm::vec3(heli_direction.x, 0.0, heli_direction.z));
                     // right = glm::cross(&flat_direction, &glm::vec3(0.0, 1.0, 0.0));
-
+                    // TODO: Handle inputs in a state machine
                     match key {
                         /* Move left/right */
                         VirtualKeyCode::A => {
@@ -546,6 +579,8 @@ fn main() {
             }
 
             skybox_node.position = position;
+            text_pos_mesh = mesh::Mesh::text_buffer(&format!("position: {:.3},{:.3},{:.3}", position.x, position.y, position.z), 49.0 / 29.0, 1.0);
+            text_pos_node.update_buffers(&text_pos_mesh);
 
             //-------------------------------------------------------------/
             // Draw section

@@ -480,12 +480,7 @@ impl Mesh {
                     pos.z * (1.0 - pos.x.powi(2) / 2.0 - pos.y.powi(2) / 2.0 + pos.x.powi(2) * pos.y.powi(2) / 3.0).sqrt(),
                 ).component_mul(&scale) * 0.5;
                 vertices[z * res + x] = pos;
-                // Waves
-                // vertices[y * res + x] = glm::vec3(
-                //     2.0 * x as f32 / res as f32 - 1.0,
-                //     ((2.0 * x as f32 / res as f32 - 1.0)*10.0).sin() / 10.0 + ((2.0 * y as f32 / res as f32 - 1.0)*10.0).sin() / 10.0,
-                //     2.0 * y as f32 / res as f32 - 1.0,
-                // ).component_mul(&scale) * 0.5;
+
                 texture[z * res + x] = glm::vec2(
                     ((pos.x + pos.z).atan() + 1.0) / 2.0,
                     ((pos.y / pos.x).atan() + 1.0) / 2.0,
@@ -548,9 +543,6 @@ impl Mesh {
                 //     pos.y * (1.0 - pos.x.powi(2) / 2.0 - pos.z.powi(2) / 2.0 + pos.x.powi(2) * pos.z.powi(2) / 3.0).sqrt(),
                 //     pos.z * (1.0 - pos.x.powi(2) / 2.0 - pos.y.powi(2) / 2.0 + pos.x.powi(2) * pos.y.powi(2) / 3.0).sqrt(),
                 // ).component_mul(&scale) * 0.5;
-                if z == 0 && x == 0 {
-                    println!("0,0: {:?}", vertices[z * res + x]);
-                }
                 texture[z * res + x] = glm::vec2(
                     x as f32 / res as f32,
                     z as f32 / res as f32,
@@ -614,14 +606,6 @@ pub fn displace_vertices(mesh: &mut Mesh, size: f64, height: f32, offset: f32) {
     for i in 0..vertices.len() {
         let val = 1.0 + fractal_noise(perlin, &vertices[i], size, height, offset);
         vertices[i] *= val;
-        // let val = perlin.get([
-        //     mesh.vertices[i*3 + 0] as f64 * size, 
-        //     mesh.vertices[i*3 + 1] as f64 * size,
-        //     mesh.vertices[i*3 + 2] as f64 * size,
-        // ]) as f32 * height + offset;
-        // mesh.vertices[i*3 + 0] *= 1.0 + val;
-        // mesh.vertices[i*3 + 1] *= 1.0 + val;
-        // mesh.vertices[i*3 + 2] *= 1.0 + val;
     }
     
     // TODO: Solve the seams, could reuse the noise generator and use polar coordinates
@@ -639,10 +623,32 @@ pub fn displace_vertices(mesh: &mut Mesh, size: f64, height: f32, offset: f32) {
     mesh.vertices = from_array_of_vec3(vertices);
 }
 
-// pub struct Terrain;
-// impl Terrain {
-//     pub fn load(path: &str) -> Mesh {
-//         println!("Loading terrain model...");
+
+// use std::ops::Index;
+// pub struct Helicopter {
+//     pub body       : Mesh,
+//     pub door       : Mesh,
+//     pub main_rotor : Mesh,
+//     pub tail_rotor : Mesh,
+// }
+
+// // You can use square brackets to access the components of the helicopter, if you want to use loops!
+// impl Index<usize> for Helicopter {
+//     type Output = Mesh;
+//     fn index<'a>(&'a self, i: usize) -> &'a Mesh {
+//         match i {
+//             0 => &self.body,
+//             1 => &self.main_rotor,
+//             2 => &self.tail_rotor,
+//             3 => &self.door,
+//             _ => panic!("Invalid index, try [0,3]"),
+//         }
+//     }
+// }
+
+// impl Helicopter {
+//     pub fn load(path: &str) -> Self {
+//         println!("Loading helicopter model...");
 //         let before = std::time::Instant::now();
 //         let (models, _materials)
 //             = tobj::load_obj(path,
@@ -651,80 +657,25 @@ pub fn displace_vertices(mesh: &mut Mesh, size: f64, height: f32, offset: f32) {
 //                     single_index: true,
 //                     ..Default::default()
 //                 }
-//             ).expect("Failed to load terrain model");
+//             ).expect("Failed to load helicopter model");
 //         let after = std::time::Instant::now();
-//         println!("Done in {:.3}ms.", after.duration_since(before).as_micros() as f32 / 1e3);
+//         println!("Done in {:.3}ms!", after.duration_since(before).as_micros() as f32 / 1e3);
 
-//         if models.len() > 1 || models.len() == 0 {
-//             panic!("Please use a model with a single mesh!")
-//             // You could try merging the vertices and indices
-//             // of the separate meshes into a single mesh.
-//             // I'll leave that as an optional exercise. ;)
+//         for model in &models {
+//             println!("Loaded {} with {} points and {} triangles.", model.name, model.mesh.positions.len() / 3, model.mesh.indices.len() / 3);
 //         }
 
-//         let terrain = models[0].to_owned();
-//         println!("Loaded {} with {} points and {} triangles.",
-//             terrain.name,
-//             terrain.mesh.positions.len() /3,
-//             terrain.mesh.indices.len() / 3,
-//         );
+//         let body_model = models.iter().find(|m| m.name == "Body_body").expect("Incorrect model file!").to_owned();
+//         let door_model = models.iter().find(|m| m.name == "Door_door").expect("Incorrect model file!").to_owned();
+//         let main_rotor_model = models.iter().find(|m| m.name == "Main_Rotor_main_rotor").expect("Incorrect model file!").to_owned();
+//         let tail_rotor_model = models.iter().find(|m| m.name == "Tail_Rotor_tail_rotor").expect("Incorrect model file!").to_owned();
 
-//         Mesh::from(terrain.mesh, [1.0, 1.0, 1.0, 1.0])
+//         Helicopter {
+//             body:       Mesh::from(body_model.mesh,         glm::vec4(0.3, 0.3, 0.3, 1.0)),
+//             door:       Mesh::from(door_model.mesh,         glm::vec4(0.1, 0.1, 0.3, 1.0)),
+//             main_rotor: Mesh::from(main_rotor_model.mesh,   glm::vec4(0.3, 0.1, 0.1, 1.0)),
+//             tail_rotor: Mesh::from(tail_rotor_model.mesh,   glm::vec4(0.1, 0.3, 0.1, 1.0)),
+//         }
 //     }
 // }
-
-use std::ops::Index;
-pub struct Helicopter {
-    pub body       : Mesh,
-    pub door       : Mesh,
-    pub main_rotor : Mesh,
-    pub tail_rotor : Mesh,
-}
-
-// You can use square brackets to access the components of the helicopter, if you want to use loops!
-impl Index<usize> for Helicopter {
-    type Output = Mesh;
-    fn index<'a>(&'a self, i: usize) -> &'a Mesh {
-        match i {
-            0 => &self.body,
-            1 => &self.main_rotor,
-            2 => &self.tail_rotor,
-            3 => &self.door,
-            _ => panic!("Invalid index, try [0,3]"),
-        }
-    }
-}
-
-impl Helicopter {
-    pub fn load(path: &str) -> Self {
-        println!("Loading helicopter model...");
-        let before = std::time::Instant::now();
-        let (models, _materials)
-            = tobj::load_obj(path,
-                &tobj::LoadOptions{
-                    triangulate: true,
-                    single_index: true,
-                    ..Default::default()
-                }
-            ).expect("Failed to load helicopter model");
-        let after = std::time::Instant::now();
-        println!("Done in {:.3}ms!", after.duration_since(before).as_micros() as f32 / 1e3);
-
-        for model in &models {
-            println!("Loaded {} with {} points and {} triangles.", model.name, model.mesh.positions.len() / 3, model.mesh.indices.len() / 3);
-        }
-
-        let body_model = models.iter().find(|m| m.name == "Body_body").expect("Incorrect model file!").to_owned();
-        let door_model = models.iter().find(|m| m.name == "Door_door").expect("Incorrect model file!").to_owned();
-        let main_rotor_model = models.iter().find(|m| m.name == "Main_Rotor_main_rotor").expect("Incorrect model file!").to_owned();
-        let tail_rotor_model = models.iter().find(|m| m.name == "Tail_Rotor_tail_rotor").expect("Incorrect model file!").to_owned();
-
-        Helicopter {
-            body:       Mesh::from(body_model.mesh,         glm::vec4(0.3, 0.3, 0.3, 1.0)),
-            door:       Mesh::from(door_model.mesh,         glm::vec4(0.1, 0.1, 0.3, 1.0)),
-            main_rotor: Mesh::from(main_rotor_model.mesh,   glm::vec4(0.3, 0.1, 0.1, 1.0)),
-            tail_rotor: Mesh::from(tail_rotor_model.mesh,   glm::vec4(0.1, 0.3, 0.1, 1.0)),
-        }
-    }
-}
 
