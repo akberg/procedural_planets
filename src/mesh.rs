@@ -600,8 +600,16 @@ pub fn displace_vertices(mesh: &mut Mesh, size: f64, height: f32, offset: f32) {
     let mut normals = to_array_of_vec3(mesh.normals.clone());
     for i in (0..mesh.index_count).step_by(3) {
         let i = i as usize;
+        // let mut v0 = glm::normalize(&vertices[mesh.indices[i] as usize]);
+        // let mut v1 = glm::rotate_x_vec3(&v0, std::f32::consts::PI / (4.0 * 4096.0));
+        // let mut v2 = glm::rotate_z_vec3(&v0, -std::f32::consts::PI / (4.0 * 4096.0));
+        // v0 *= 1.0 + fractal_noise(perlin, &v0, size, height, offset);
+        // v1 *= 1.0 + fractal_noise(perlin, &v1, size, height, offset);
+        // v2 *= 1.0 + fractal_noise(perlin, &v2, size, height, offset);
         let v1 = vertices[mesh.indices[i + 1] as usize] - vertices[mesh.indices[i] as usize];
         let v2 = vertices[mesh.indices[i + 2] as usize] - vertices[mesh.indices[i] as usize];
+        // v1 = v1 - v0;
+        // v2 = v2 - v0;
         let norm = glm::normalize(&glm::cross(&v1, &v2));
         normals[mesh.indices[i] as usize] = norm;
         normals[mesh.indices[i + 1] as usize] = norm;
