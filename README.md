@@ -8,6 +8,7 @@
 ![Apply noise and add an additional sphere as an ocean](report/images/red-planet-w-ocean.png)
 ![Playing with adding a height dependent colour map](report/images/planet-w-cheated-heightmap.png)
 ![Ocean and skybox](report/images/planet-skybox-ocean.png)
+![Abstraction to make two planets at once](report/images/two-planets.png)
 
 ## Project description: Procedurally generated planet
 
