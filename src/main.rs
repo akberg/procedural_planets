@@ -229,204 +229,226 @@ fn main() {
         //     32,
         //     None
         // );
-        let mut cubesphere = SceneNode::with_type(SceneNodeType::Empty);
-        cubesphere.scale *= 10.0;
-        // for &n in cubesphere.children.iter() {
-        //     mesh::displace_vertices((&mut *n).mesh, size, height, offset);
-        // }
-        let subdivisions = 144;
-        let color = glm::vec4(0.2, 0.8, 0.4, 1.0);
+        // let mut cubesphere = SceneNode::with_type(SceneNodeType::Empty);
+        // cubesphere.scale *= 10.0;
+        // // for &n in cubesphere.children.iter() {
+        // //     mesh::displace_vertices((&mut *n).mesh, size, height, offset);
+        // // }
+        // let subdivisions = 64;
+        // let color = glm::vec4(0.2, 0.8, 0.4, 1.0);
 
-        // Top
-        let mut plane0_mesh = mesh::Mesh::cs_plane(
-            glm::vec3(1.0, 1.0, 1.0), 
-            glm::vec3(0.0, 0.0, 0.0),
-            glm::vec3(0.0, 1.0, 0.0),
-            subdivisions, true,
-            Some(color)
-        );
-        mesh::displace_vertices(&mut plane0_mesh, size, height, offset);
-        let plane0_vao = unsafe { plane0_mesh.mkvao() };
-        let mut plane0_node = SceneNode::from_vao(plane0_vao);
-        plane0_node.node_type = SceneNodeType::Planet;
-        // Bottom
-        let mut plane1_mesh = mesh::Mesh::cs_plane(
-            glm::vec3(1.0, 1.0, 1.0), 
-            glm::vec3(std::f32::consts::PI, 0.0, 0.0),
-            glm::vec3(0.0, -1.0, 0.0),
-            subdivisions, true,
-            Some(color)
-        );
-        mesh::displace_vertices(&mut plane1_mesh, size, height, offset);
-        let plane1_vao = unsafe { plane1_mesh.mkvao() };
-        let mut plane1_node = SceneNode::from_vao(plane1_vao);
-        plane1_node.node_type = SceneNodeType::Planet;
-        // Front
-        let mut plane2_mesh = mesh::Mesh::cs_plane(
-            glm::vec3(1.0, 1.0, 1.0), 
-            glm::vec3(std::f32::consts::FRAC_PI_2, 0.0, 0.0),
-            glm::vec3(0.0, 0.0, 1.0),
-            subdivisions, true,
-            Some(color)
-        );
-        mesh::displace_vertices(&mut plane2_mesh, size, height, offset);
-        let plane2_vao = unsafe { plane2_mesh.mkvao() };
-        let mut plane2_node = SceneNode::from_vao(plane2_vao);
-        plane2_node.node_type = SceneNodeType::Planet;
-        // Back
-        let mut plane3_mesh = mesh::Mesh::cs_plane(
-            glm::vec3(1.0, 1.0, 1.0), 
-            glm::vec3(-std::f32::consts::FRAC_PI_2, 0.0, 0.0),
-            glm::vec3(0.0, 0.0, -1.0),
-            subdivisions, true,
-            Some(color)
-        );
-        mesh::displace_vertices(&mut plane3_mesh, size, height, offset);
-        let plane3_vao = unsafe { plane3_mesh.mkvao() };
-        let mut plane3_node = SceneNode::from_vao(plane3_vao);
-        plane3_node.node_type = SceneNodeType::Planet;
-        // Left
-        let mut plane4_mesh = mesh::Mesh::cs_plane(
-            glm::vec3(1.0, 1.0, 1.0), 
-            glm::vec3(0.0, 0.0, -std::f32::consts::FRAC_PI_2),
-            glm::vec3(1.0, 0.0, 0.0),
-            subdivisions, true,
-            Some(color)
-        );
-        mesh::displace_vertices(&mut plane4_mesh, size, height, offset);
-        let plane4_vao = unsafe { plane4_mesh.mkvao() };
-        let mut plane4_node = SceneNode::from_vao(plane4_vao);
-        plane4_node.node_type = SceneNodeType::Planet;
-        // Right
-        let mut plane5_mesh = mesh::Mesh::cs_plane(
-            glm::vec3(1.0, 1.0, 1.0), 
-            glm::vec3(0.0, 0.0, std::f32::consts::FRAC_PI_2),
-            glm::vec3(-1.0, 0.0, 0.0),
-            subdivisions, true,
-            Some(color)
-        );
-        mesh::displace_vertices(&mut plane5_mesh, size, height, offset);
-        let plane5_vao = unsafe { plane5_mesh.mkvao() };
-        let mut plane5_node = SceneNode::from_vao(plane5_vao);
-        plane5_node.node_type = SceneNodeType::Planet;
+        // // Top
+        // let mut plane0_mesh = mesh::Mesh::cs_plane(
+        //     glm::vec3(1.0, 1.0, 1.0), 
+        //     glm::vec3(0.0, 0.0, 0.0),
+        //     glm::vec3(0.0, 1.0, 0.0),
+        //     subdivisions, true,
+        //     Some(color)
+        // );
+        // mesh::displace_vertices(&mut plane0_mesh, size, height, offset);
+        // let plane0_vao = unsafe { plane0_mesh.mkvao() };
+        // let mut plane0_node = SceneNode::from_vao(plane0_vao);
+        // plane0_node.node_type = SceneNodeType::Planet;
+        // // Bottom
+        // let mut plane1_mesh = mesh::Mesh::cs_plane(
+        //     glm::vec3(1.0, 1.0, 1.0), 
+        //     glm::vec3(std::f32::consts::PI, 0.0, 0.0),
+        //     glm::vec3(0.0, -1.0, 0.0),
+        //     subdivisions, true,
+        //     Some(color)
+        // );
+        // mesh::displace_vertices(&mut plane1_mesh, size, height, offset);
+        // let plane1_vao = unsafe { plane1_mesh.mkvao() };
+        // let mut plane1_node = SceneNode::from_vao(plane1_vao);
+        // plane1_node.node_type = SceneNodeType::Planet;
+        // // Front
+        // let mut plane2_mesh = mesh::Mesh::cs_plane(
+        //     glm::vec3(1.0, 1.0, 1.0), 
+        //     glm::vec3(std::f32::consts::FRAC_PI_2, 0.0, 0.0),
+        //     glm::vec3(0.0, 0.0, 1.0),
+        //     subdivisions, true,
+        //     Some(color)
+        // );
+        // mesh::displace_vertices(&mut plane2_mesh, size, height, offset);
+        // let plane2_vao = unsafe { plane2_mesh.mkvao() };
+        // let mut plane2_node = SceneNode::from_vao(plane2_vao);
+        // plane2_node.node_type = SceneNodeType::Planet;
+        // // Back
+        // let mut plane3_mesh = mesh::Mesh::cs_plane(
+        //     glm::vec3(1.0, 1.0, 1.0), 
+        //     glm::vec3(-std::f32::consts::FRAC_PI_2, 0.0, 0.0),
+        //     glm::vec3(0.0, 0.0, -1.0),
+        //     subdivisions, true,
+        //     Some(color)
+        // );
+        // mesh::displace_vertices(&mut plane3_mesh, size, height, offset);
+        // let plane3_vao = unsafe { plane3_mesh.mkvao() };
+        // let mut plane3_node = SceneNode::from_vao(plane3_vao);
+        // plane3_node.node_type = SceneNodeType::Planet;
+        // // Left
+        // let mut plane4_mesh = mesh::Mesh::cs_plane(
+        //     glm::vec3(1.0, 1.0, 1.0), 
+        //     glm::vec3(0.0, 0.0, -std::f32::consts::FRAC_PI_2),
+        //     glm::vec3(1.0, 0.0, 0.0),
+        //     subdivisions, true,
+        //     Some(color)
+        // );
+        // mesh::displace_vertices(&mut plane4_mesh, size, height, offset);
+        // let plane4_vao = unsafe { plane4_mesh.mkvao() };
+        // let mut plane4_node = SceneNode::from_vao(plane4_vao);
+        // plane4_node.node_type = SceneNodeType::Planet;
+        // // Right
+        // let mut plane5_mesh = mesh::Mesh::cs_plane(
+        //     glm::vec3(1.0, 1.0, 1.0), 
+        //     glm::vec3(0.0, 0.0, std::f32::consts::FRAC_PI_2),
+        //     glm::vec3(-1.0, 0.0, 0.0),
+        //     subdivisions, true,
+        //     Some(color)
+        // );
+        // mesh::displace_vertices(&mut plane5_mesh, size, height, offset);
+        // let plane5_vao = unsafe { plane5_mesh.mkvao() };
+        // let mut plane5_node = SceneNode::from_vao(plane5_vao);
+        // plane5_node.node_type = SceneNodeType::Planet;
                 
-        cubesphere.add_child(&plane0_node);
-        cubesphere.add_child(&plane1_node);
-        cubesphere.add_child(&plane2_node);
-        cubesphere.add_child(&plane3_node);
-        cubesphere.add_child(&plane4_node);
-        cubesphere.add_child(&plane5_node);
-        // Cubesphere creation done
+        // cubesphere.add_child(&plane0_node);
+        // cubesphere.add_child(&plane1_node);
+        // cubesphere.add_child(&plane2_node);
+        // cubesphere.add_child(&plane3_node);
+        // cubesphere.add_child(&plane4_node);
+        // cubesphere.add_child(&plane5_node);
+        // // Cubesphere creation done
         
 
-        // Create cubesphere
-        let mut cs_ocean = SceneNode::with_type(SceneNodeType::Empty);
-        cs_ocean.scale *= 10.001;
-        let size = 10.0;
-        let height = 0.05;
-        let offset = 0.0;
-        let subdivisions = 16;
-        let color = glm::vec4(0.1, 0.3, 0.8, 0.8);
+        // // Create cubesphere
+        // let mut cs_ocean = SceneNode::with_type(SceneNodeType::Empty);
+        // cs_ocean.scale *= 10.001;
+        // let size = 10.0;
+        // let height = 0.05;
+        // let offset = 0.0;
+        // let subdivisions = 16;
+        // let color = glm::vec4(0.1, 0.3, 0.8, 0.8);
 
-        // Top
-        let mut plane0_mesh = mesh::Mesh::cs_plane(
-            glm::vec3(1.0, 1.0, 1.0), 
-            glm::vec3(0.0, 0.0, 0.0),
-            glm::vec3(0.0, 1.0, 0.0),
-            subdivisions, true,
-            Some(color)
-        );
-        // mesh::displace_vertices(&mut plane0_mesh, size, height, offset);
-        let plane0_vao = unsafe { plane0_mesh.mkvao() };
-        let mut plane0_node = SceneNode::from_vao(plane0_vao);
-        plane0_node.node_type = SceneNodeType::Ocean;
-        // Bottom
-        let mut plane1_mesh = mesh::Mesh::cs_plane(
-            glm::vec3(1.0, 1.0, 1.0), 
-            glm::vec3(std::f32::consts::PI, 0.0, 0.0),
-            glm::vec3(0.0, -1.0, 0.0),
-            subdivisions, true,
-            Some(color)
-        );
-        // mesh::displace_vertices(&mut plane1_mesh, size, height, offset);
-        let plane1_vao = unsafe { plane1_mesh.mkvao() };
-        let mut plane1_node = SceneNode::from_vao(plane1_vao);
-        plane1_node.node_type = SceneNodeType::Ocean;
-        // Front
-        let mut plane2_mesh = mesh::Mesh::cs_plane(
-            glm::vec3(1.0, 1.0, 1.0), 
-            glm::vec3(std::f32::consts::FRAC_PI_2, 0.0, 0.0),
-            glm::vec3(0.0, 0.0, 1.0),
-            subdivisions, true,
-            Some(color)
-        );
-        // mesh::displace_vertices(&mut plane2_mesh, size, height, offset);
-        let plane2_vao = unsafe { plane2_mesh.mkvao() };
-        let mut plane2_node = SceneNode::from_vao(plane2_vao);
-        plane2_node.node_type = SceneNodeType::Ocean;
-        // Back
-        let mut plane3_mesh = mesh::Mesh::cs_plane(
-            glm::vec3(1.0, 1.0, 1.0), 
-            glm::vec3(-std::f32::consts::FRAC_PI_2, 0.0, 0.0),
-            glm::vec3(0.0, 0.0, -1.0),
-            subdivisions, true,
-            Some(color)
-        );
-        // mesh::displace_vertices(&mut plane3_mesh, size, height, offset);
-        let plane3_vao = unsafe { plane3_mesh.mkvao() };
-        let mut plane3_node = SceneNode::from_vao(plane3_vao);
-        plane3_node.node_type = SceneNodeType::Ocean;
-        // Left
-        let mut plane4_mesh = mesh::Mesh::cs_plane(
-            glm::vec3(1.0, 1.0, 1.0), 
-            glm::vec3(0.0, 0.0, -std::f32::consts::FRAC_PI_2),
-            glm::vec3(1.0, 0.0, 0.0),
-            subdivisions, true,
-            Some(color)
-        );
-        // mesh::displace_vertices(&mut plane4_mesh, size, height, offset);
-        let plane4_vao = unsafe { plane4_mesh.mkvao() };
-        let mut plane4_node = SceneNode::from_vao(plane4_vao);
-        plane4_node.node_type = SceneNodeType::Ocean;
-        // Right
-        let mut plane5_mesh = mesh::Mesh::cs_plane(
-            glm::vec3(1.0, 1.0, 1.0), 
-            glm::vec3(0.0, 0.0, std::f32::consts::FRAC_PI_2),
-            glm::vec3(-1.0, 0.0, 0.0),
-            subdivisions, true,
-            Some(color)
-        );
-        // mesh::displace_vertices(&mut plane5_mesh, size, height, offset);
-        let plane5_vao = unsafe { plane5_mesh.mkvao() };
-        let mut plane5_node = SceneNode::from_vao(plane5_vao);
-        plane5_node.node_type = SceneNodeType::Ocean;
-
-
-        // let mut plane5_node = SceneNode::with_type(SceneNodeType::Empty);
-        // let plane50_mesh = mesh::Mesh::cs_plane(
-        //     glm::vec3(0.25, 0.25, 0.25), 
-        //     glm::vec3(0.0, 0.0, std::f32::consts::FRAC_PI_2),
-        //     glm::vec3(-1.0, -0.5, -0.5),
-        //     16, true,
-        //     Some(glm::vec4(0.8, 0.2, 0.4, 1.0))
+        // // Top
+        // let mut plane0_mesh = mesh::Mesh::cs_plane(
+        //     glm::vec3(1.0, 1.0, 1.0), 
+        //     glm::vec3(0.0, 0.0, 0.0),
+        //     glm::vec3(0.0, 1.0, 0.0),
+        //     subdivisions, true,
+        //     Some(color)
         // );
-        // let plane50_vao = unsafe { mkvao(&plane50_mesh) };
-        // let mut plane50_node = SceneNode::from_vao(plane50_vao.vao, plane50_vao.n);
-        // plane5_node.add_child(&plane50_node);
+        // // mesh::displace_vertices(&mut plane0_mesh, size, height, offset);
+        // let plane0_vao = unsafe { plane0_mesh.mkvao() };
+        // let mut plane0_node = SceneNode::from_vao(plane0_vao);
+        // plane0_node.node_type = SceneNodeType::Ocean;
+        // // Bottom
+        // let mut plane1_mesh = mesh::Mesh::cs_plane(
+        //     glm::vec3(1.0, 1.0, 1.0), 
+        //     glm::vec3(std::f32::consts::PI, 0.0, 0.0),
+        //     glm::vec3(0.0, -1.0, 0.0),
+        //     subdivisions, true,
+        //     Some(color)
+        // );
+        // // mesh::displace_vertices(&mut plane1_mesh, size, height, offset);
+        // let plane1_vao = unsafe { plane1_mesh.mkvao() };
+        // let mut plane1_node = SceneNode::from_vao(plane1_vao);
+        // plane1_node.node_type = SceneNodeType::Ocean;
+        // // Front
+        // let mut plane2_mesh = mesh::Mesh::cs_plane(
+        //     glm::vec3(1.0, 1.0, 1.0), 
+        //     glm::vec3(std::f32::consts::FRAC_PI_2, 0.0, 0.0),
+        //     glm::vec3(0.0, 0.0, 1.0),
+        //     subdivisions, true,
+        //     Some(color)
+        // );
+        // // mesh::displace_vertices(&mut plane2_mesh, size, height, offset);
+        // let plane2_vao = unsafe { plane2_mesh.mkvao() };
+        // let mut plane2_node = SceneNode::from_vao(plane2_vao);
+        // plane2_node.node_type = SceneNodeType::Ocean;
+        // // Back
+        // let mut plane3_mesh = mesh::Mesh::cs_plane(
+        //     glm::vec3(1.0, 1.0, 1.0), 
+        //     glm::vec3(-std::f32::consts::FRAC_PI_2, 0.0, 0.0),
+        //     glm::vec3(0.0, 0.0, -1.0),
+        //     subdivisions, true,
+        //     Some(color)
+        // );
+        // // mesh::displace_vertices(&mut plane3_mesh, size, height, offset);
+        // let plane3_vao = unsafe { plane3_mesh.mkvao() };
+        // let mut plane3_node = SceneNode::from_vao(plane3_vao);
+        // plane3_node.node_type = SceneNodeType::Ocean;
+        // // Left
+        // let mut plane4_mesh = mesh::Mesh::cs_plane(
+        //     glm::vec3(1.0, 1.0, 1.0), 
+        //     glm::vec3(0.0, 0.0, -std::f32::consts::FRAC_PI_2),
+        //     glm::vec3(1.0, 0.0, 0.0),
+        //     subdivisions, true,
+        //     Some(color)
+        // );
+        // // mesh::displace_vertices(&mut plane4_mesh, size, height, offset);
+        // let plane4_vao = unsafe { plane4_mesh.mkvao() };
+        // let mut plane4_node = SceneNode::from_vao(plane4_vao);
+        // plane4_node.node_type = SceneNodeType::Ocean;
+        // // Right
+        // let mut plane5_mesh = mesh::Mesh::cs_plane(
+        //     glm::vec3(1.0, 1.0, 1.0), 
+        //     glm::vec3(0.0, 0.0, std::f32::consts::FRAC_PI_2),
+        //     glm::vec3(-1.0, 0.0, 0.0),
+        //     subdivisions, true,
+        //     Some(color)
+        // );
+        // // mesh::displace_vertices(&mut plane5_mesh, size, height, offset);
+        // let plane5_vao = unsafe { plane5_mesh.mkvao() };
+        // let mut plane5_node = SceneNode::from_vao(plane5_vao);
+        // plane5_node.node_type = SceneNodeType::Ocean;
 
 
-        cs_ocean.add_child(&plane0_node);
-        cs_ocean.add_child(&plane1_node);
-        cs_ocean.add_child(&plane2_node);
-        cs_ocean.add_child(&plane3_node);
-        cs_ocean.add_child(&plane4_node);
-        cs_ocean.add_child(&plane5_node);
+        // // let mut plane5_node = SceneNode::with_type(SceneNodeType::Empty);
+        // // let plane50_mesh = mesh::Mesh::cs_plane(
+        // //     glm::vec3(0.25, 0.25, 0.25), 
+        // //     glm::vec3(0.0, 0.0, std::f32::consts::FRAC_PI_2),
+        // //     glm::vec3(-1.0, -0.5, -0.5),
+        // //     16, true,
+        // //     Some(glm::vec4(0.8, 0.2, 0.4, 1.0))
+        // // );
+        // // let plane50_vao = unsafe { mkvao(&plane50_mesh) };
+        // // let mut plane50_node = SceneNode::from_vao(plane50_vao.vao, plane50_vao.n);
+        // // plane5_node.add_child(&plane50_node);
+
+
+        // cs_ocean.add_child(&plane0_node);
+        // cs_ocean.add_child(&plane1_node);
+        // cs_ocean.add_child(&plane2_node);
+        // cs_ocean.add_child(&plane3_node);
+        // cs_ocean.add_child(&plane4_node);
+        // cs_ocean.add_child(&plane5_node);
         // Cubesphere creation done
 
         // let part_plane = mesh::Mesh::cs_part_plane(glm::vec3(-1.0, 0.0, 1.0), glm::vec3(1.0, 0.0, -1.0), 64, true);
         // let pplane_vao = unsafe { mkvao(&part_plane) };
         // let mut pplane_node = SceneNode::from_vao(pplane_vao.vao, pplane_vao.n);
 
+        let mut planet0 = planet::Planet::new();
+        planet0.noise_params = planet::PlanetParameters {
+            size: 10.0,
+            height: 0.05,
+            niter: 1
+        };
+        let mut planet0_node = scene_graph::SceneNode::with_type(SceneNodeType::PlanetSkip);
+        unsafe { planet0.lod(&mut planet0_node, position) };
+
+        let mut planet1 = planet::Planet::new();
+        planet1.noise_params = planet::PlanetParameters {
+            size: 10.0002,
+            height: 0.04,
+            niter: 1
+        };
+        let mut planet1_node = scene_graph::SceneNode::with_type(SceneNodeType::PlanetSkip);
+        planet1_node.position = glm::vec3(2.0, 2.0, 2.0);
+        unsafe { planet1.lod(&mut planet1_node, position) };
+
+        //---------------------------------------------------------------------/
+        // GUI meshes
+        //---------------------------------------------------------------------/
         let text_title = mesh::Mesh::text_buffer("THE GAME", 49.0 / 29.0, 1.0);
         let mut text_title_node = SceneNode::from_vao(unsafe { text_title.mkvao() });
         text_title_node.node_type = SceneNodeType::Geometry2d;
@@ -441,6 +463,22 @@ fn main() {
         text_pos_node.position = glm::vec3(-1.0, -1.0, 0.0);
         text_pos_node.scale = glm::vec3(1.0, 1.0, 1.0) * 0.9;
 
+        #[allow(unused_assignments)]
+        let mut text_pstate_mesh = mesh::Mesh::text_buffer(".", 49.0 / 29.0, 1.0);
+        let mut text_pstate_node = SceneNode::from_vao(unsafe { text_pos_mesh.mkvao() });
+        text_pstate_node.node_type = SceneNodeType::Geometry2d;
+        text_pstate_node.texture_id = Some(charmap_id);
+        text_pstate_node.position = glm::vec3(-1.0, -0.95, 0.0);
+        text_pstate_node.scale = glm::vec3(1.0, 1.0, 1.0) * 0.9;
+
+        #[allow(unused_assignments)]
+        let mut text_mspeed_mesh = mesh::Mesh::text_buffer(".", 49.0 / 29.0, 1.0);
+        let mut text_mspeed_node = SceneNode::from_vao(unsafe { text_pos_mesh.mkvao() });
+        text_mspeed_node.node_type = SceneNodeType::Geometry2d;
+        text_mspeed_node.texture_id = Some(charmap_id);
+        text_mspeed_node.position = glm::vec3(-1.0, -0.9, 0.0);
+        text_mspeed_node.scale = glm::vec3(1.0, 1.0, 1.0) * 0.9;
+
 
 
         //---------------------------------------------------------------------/
@@ -449,8 +487,10 @@ fn main() {
         let mut scene_root = SceneNode::new();
         // scene_root.add_child(&cube_node);
         scene_root.add_child(&skybox_node);
-        scene_root.add_child(&cubesphere);
-        scene_root.add_child(&cs_ocean);
+        scene_root.add_child(&planet0_node);
+        scene_root.add_child(&planet1_node);
+        // scene_root.add_child(&cubesphere);
+        // scene_root.add_child(&cs_ocean);
         // scene_root.add_child(&plane0_node);
 
         unsafe { scene_root.update_node_transformations(&glm::identity()); }
@@ -460,11 +500,13 @@ fn main() {
         let mut gui_root = SceneNode::new();
         gui_root.add_child(&text_title_node);
         gui_root.add_child(&text_pos_node);
+        gui_root.add_child(&text_pstate_node);
+        gui_root.add_child(&text_mspeed_node);
 
         //---------------------------------------------------------------------/
         // Uniform values
         //---------------------------------------------------------------------/
-        let mut timestamp = std::time::SystemTime::now();
+        let timestamp = std::time::SystemTime::now();
 
 
         //---------------------------------------------------------------------/        
@@ -516,8 +558,8 @@ fn main() {
                             // heli_body_nodes[n_helis].position += right * delta_time * movement_speed;
                             // position += right * delta_time * movement_speed;
                             position += match player_state {
-                                FreeFloat => right * delta_time * movement_speed,
-                                Anchored(a) => right * delta_time * movement_speed,
+                                FreeFloat => right * delta_time * conf.movement_speed,
+                                Anchored(a) => right * delta_time * conf.movement_speed,
                             }
                         },
                         /* Move forward (inward)/backward, in camera direction */
@@ -525,24 +567,24 @@ fn main() {
                             // heli_body_nodes[n_helis].position += flat_direction * delta_time * movement_speed;
                             // position += direction * delta_time * movement_speed;
                             position += match player_state {
-                                FreeFloat => direction * delta_time * movement_speed,
-                                Anchored(a) => direction * delta_time * movement_speed,
+                                FreeFloat => direction * delta_time * conf.movement_speed,
+                                Anchored(a) => direction * delta_time * conf.movement_speed,
                             }
                         },
                         VirtualKeyCode::S => {
                             // heli_body_nodes[n_helis].position -= flat_direction * delta_time * movement_speed;
                             // position -= direction * delta_time * movement_speed;
                             position -= match player_state {
-                                FreeFloat => direction * delta_time * movement_speed,
-                                Anchored(a) => direction * delta_time * movement_speed,
+                                FreeFloat => direction * delta_time * conf.movement_speed,
+                                Anchored(a) => direction * delta_time * conf.movement_speed,
                             }
                         },
                         /* Move up/down */
                         VirtualKeyCode::Space => {
-                            position += up * delta_time * movement_speed
+                            position += up * delta_time * conf.movement_speed
                         },
                         VirtualKeyCode::LShift => {
-                            position -= up * delta_time * movement_speed
+                            position -= up * delta_time * conf.movement_speed
                         },
                         VirtualKeyCode::M => {
                             let v = key_debounce.entry(VirtualKeyCode::M).or_insert(0);
@@ -551,14 +593,29 @@ fn main() {
                                 *v = 10;
                             }
                         },
+                        VirtualKeyCode::Up => {
+                            let v = key_debounce.entry(VirtualKeyCode::Up).or_insert(0);
+                            if *v == 0 {
+                                conf.movement_speed = conf.movement_speed * 1.1;
+                                *v = 10;
+                            }
+                        },
+                        VirtualKeyCode::Down => {
+                            let v = key_debounce.entry(VirtualKeyCode::Up).or_insert(0);
+                            if *v == 0 {
+                                conf.movement_speed = conf.movement_speed / 1.1;
+                                *v = 10;
+                            }
+                        },
                         VirtualKeyCode::F => {
                             let v = key_debounce.entry(VirtualKeyCode::F).or_insert(0);
                             if *v == 0 {
+                                // TODO: Not entirely correct
                                 use player::PlayerState::*;
                                 player_state = match player_state {
                                     FreeFloat => {
                                         let a = glm::vec3(0.0, 0.0, 0.0);
-                                        let up = glm::normalize(&(position - a));
+                                        let up = -glm::normalize(&(position - a));
                                         right = glm::cross(&direction, &up);
                                         Anchored(a)  // Later: anchor to closest planet
                                     },
@@ -587,15 +644,40 @@ fn main() {
             }
 
             skybox_node.position = position;
+            //-----------------------------------------------------------------/
+            // Update GUI
+            //-----------------------------------------------------------------/
             // Log position
+            let s = format!("global position: {:.3},{:.3},{:.3}", position.x, position.y, position.z);
             text_pos_mesh = mesh::Mesh::text_buffer(
-                &format!("global position: {:.3},{:.3},{:.3}", position.x, position.y, position.z),
-                49.0 / 29.0, 1.0
+                &s,
+                49.0 / 29.0, 1.0 * s.len() as f32 / 28.0
             );
             text_pos_node.update_buffers(&text_pos_mesh);
+            // Log movement speed
+            let s = format!("Speed: {:.3}", conf.movement_speed);
+            text_mspeed_mesh = mesh::Mesh::text_buffer(
+                &s,
+                49.0 / 29.0, 1.0 * s.len() as f32 / 28.0
+            );
+            text_mspeed_node.update_buffers(&text_mspeed_mesh);
+            // Display player state
+            let s = match player_state {
+                player::PlayerState::FreeFloat => String::from("Free floating"),
+                player::PlayerState::Anchored(a) => String::from(
+                    &format!("Anchored to: {:.3},{:.3},{:.3}", a.x, a.y, a.z)
+                ),
+            };
+            text_pstate_mesh = mesh::Mesh::text_buffer(
+                &s,
+                49.0 / 29.0, 1.0 * s.len() as f32 / 28.0
+            );
+            text_pstate_node.update_buffers(&text_pstate_mesh);
 
+            //-----------------------------------------------------------------/
+            // Update perspective
+            //-----------------------------------------------------------------/
             let wsize = context.window().inner_size();
-
             let mut perspective_mat: glm::Mat4 = glm::perspective(
                 //*aspect.read().unwrap(),         // aspect
                 wsize.width as f32 / wsize.height as f32,

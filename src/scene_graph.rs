@@ -39,7 +39,7 @@ impl LightSource {
     }
 }
 
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, PartialEq, Debug)]
 pub enum SceneNodeType {
     Geometry = 0,
     Skybox = 1,
@@ -48,6 +48,7 @@ pub enum SceneNodeType {
     Ocean = 4,
     LightSource,
     Empty,          // "Empty" i.e. don't draw
+    PlanetSkip,
 }
 
 pub struct SceneNode {
@@ -117,6 +118,11 @@ impl SceneNode {
             texture_id      : None,
             children: vec![],
         })))
+    }
+
+    pub fn update_vao(&mut self, vao: mesh::VAOobj) {
+        self.vao = vao;
+        self.index_count = vao.n;
     }
 
     pub fn add_child(&mut self, child: &SceneNode) {
