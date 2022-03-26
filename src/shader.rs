@@ -69,13 +69,20 @@ impl ShaderBuilder {
         }
     }
 
-    pub unsafe fn attach_file(self, shader_path: &str) -> ShaderBuilder {
+    pub unsafe fn attach_file(self, shader_path: &str/*, include_paths: Option<Vec<&str>>*/) -> ShaderBuilder {
         let path = Path::new(shader_path);
         if let Some(extension) = path.extension() {
             let shader_type = ShaderType::from_ext(extension)
                 .expect("Failed to parse file extension.");
-            let shader_src = std::fs::read_to_string(path)
+            let mut shader_src = std::fs::read_to_string(path)
                 .expect(&format!("Failed to read shader source. {}", shader_path));
+            
+            // if let Some(inc) = include_paths {
+            //     for path in inc {
+            //         let src = std::fs::read_to_string(path).unwrap();
+            //         shader_src = shader_src + &src;
+            //     }
+            // }
             self.compile_shader(&shader_src, shader_type)
         } else {
             panic!("Failed to read extension of file with path: {}", shader_path);
