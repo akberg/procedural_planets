@@ -20,6 +20,8 @@ toc: true
 # Showcase
 
 # Log
+* 26.3:
+    * Might have found the way of doing planets. Put planet generation into the new lod function of the Planet struct.
 * 25.3:
     * Failed to support resizable window, will return to this later.
     * Fixed some bug in `SceneNode::update\_buffers`
