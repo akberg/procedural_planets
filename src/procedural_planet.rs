@@ -1,6 +1,6 @@
 use nalgebra_glm as glm;
 use crate::scene_graph::{self, SceneNodeType};
-use crate::{util, mesh};
+use crate::{util, mesh, shader::Shader};
 use std::sync::{Arc, Mutex};
 use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -38,7 +38,7 @@ static SUBDIVS_PER_LEVEL: usize = 64;
 ///     |   |---right
 ///     |   |---top
 ///     |   +---bottom
-///     +---terrain
+///     +---terrain : height texture colours
 ///         |---front : lod 0
 ///         |   |---q0 : lod 1
 ///         |   |---q1 : lod 1
@@ -83,8 +83,11 @@ impl Planet {
     }
     
     /// Update uniforms for planet in shader
-    pub fn update_uniforms(&self) {
-        
+    pub unsafe fn update_uniforms(&self, sh: &Shader) {
+        let u_planet_id = sh.get_uniform_location(&format!("u_planets[{}].planet_id", self.planet_id));
+        gl::Uniform1ui(u_planet_id, self.planet_id as u32);
+        let u_radius = sh.get_uniform_location(&format!("u_planets[{}].radius", self.planet_id));
+        // TODO: Get absolute position and other attributes
     }
     /// Set level of detail to be drawn, generate new if needed
     pub unsafe fn lod(&self, 
@@ -179,6 +182,7 @@ impl Planet {
         node.update_vao(planet_mesh.mkvao());
         node.node_type = SceneNodeType::Planet;
 
+        // TODO: actual LoD layers
         // if dist > THRESHOLD[level] {
         //     for (i, & child) in (&node.children).iter().enumerate() {
         //         // TODO Use i to offset position

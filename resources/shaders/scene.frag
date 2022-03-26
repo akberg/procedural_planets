@@ -14,9 +14,24 @@ in vec3 v_normal;
 in vec2 v_uv;
 in vec3 v_model_position;
 
+uniform float u_time; // TODO add
+
 uniform uint u_node_type;
 uniform bool u_has_texture;
-uniform float u_time; // TODO add
+
+uniform struct Planet {
+    uint planet_id;
+    vec3 position;
+    vec3 rotation;
+    uint radius;
+    vec3 emission;
+    bool has_ocean;
+    vec3 ocean_color;
+    float noise_size;
+    float noise_height;
+} u_planets[];
+uniform int u_planets_len;
+uniform uint u_closest_planet;
 
 out vec4 color;
 
@@ -221,11 +236,12 @@ vec3 phong_light(
     );
 }
 
-/*
- * "Seascape" by Alexander Alekseev aka TDM - 2014
- * License Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License.
- * Contact: tdmaav@gmail.com
- */
+
+//-----------------------------------------------------------------------------/
+// "Seascape" by Alexander Alekseev aka TDM - 2014
+// License Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License.
+// Contact: tdmaav@gmail.com
+//-----------------------------------------------------------------------------/
 // sea constants (to be made uniforms)
 const float PI	 	= 3.141592;
 const float EPSILON	= 1e-3;
@@ -314,7 +330,10 @@ vec4 ocean_shader(vec3 ocean_color)
     ), 1.0);
 }
 
-
+//-----------------------------------------------------------------------------/
+// SKYBOX
+// Renders a starry sky, and a texture of distant planets
+//-----------------------------------------------------------------------------/
 vec4 skybox_shader()
 {
     vec3 pos = normalize(v_position);
