@@ -125,8 +125,13 @@ fn main() {
         print!("Compiling shader . . . ");
         let sh = unsafe {
             let sh = shader::ShaderBuilder::new()
-                .attach_file("./resources/shaders/scene.vert")
-                .attach_file("./resources/shaders/scene.frag")
+                .attach_file("./resources/shaders/scene.vert", None)
+                .attach_file(
+                    "./resources/shaders/scene.frag", 
+                    Some(vec![
+                        "./resources/shaders/noise.glsl",
+                    ])
+                )
                 .link();
 
             sh.activate();
@@ -200,6 +205,7 @@ fn main() {
         // Small earth-like planet
         let mut planet0 = planet::Planet::new();
         planet0.noise_params = planet::PlanetParameters {
+            seed: 328342.03455,
             size: 10.0,
             height: 0.05,
             niter: 1
@@ -213,6 +219,7 @@ fn main() {
         let mut planet1 = planet::Planet::new();
         planet1.has_ocean = false;
         planet1.noise_params = planet::PlanetParameters {
+            seed: 2786.431,
             size: 10.002,
             height: 0.005,
             niter: 1
@@ -227,6 +234,7 @@ fn main() {
         planet2.has_ocean = false;
         planet2.emission = glm::vec3(0.9,0.6,0.4);
         planet2.noise_params = planet::PlanetParameters {
+            seed: 54320.6123,
             size: 7.5,
             height: 0.01,
             niter: 1
@@ -280,9 +288,9 @@ fn main() {
         //---------------------------------------------------------------------/
         let mut scene_root = SceneNode::new();
         scene_root.add_child(&skybox_node);
-        scene_root.add_child(&planet_nodes[0]);
-        scene_root.add_child(&planet_nodes[1]);
-        scene_root.add_child(&planet_nodes[2]);
+        // scene_root.add_child(&planet_nodes[0]);
+        // scene_root.add_child(&planet_nodes[1]);
+        // scene_root.add_child(&planet_nodes[2]);
 
         unsafe { scene_root.update_node_transformations(&glm::identity()); }
 
