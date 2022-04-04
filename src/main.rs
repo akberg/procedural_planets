@@ -191,61 +191,60 @@ fn main() {
         //---------------------------------------------------------------------/
 
         // Skybox, inverted cube that stays centered around the player
-        let mut skybox_mesh = mesh::Mesh::cube(
+        let skybox_mesh = mesh::Mesh::cube(
             glm::vec3(conf.clip_far-0.1, conf.clip_far-0.1, conf.clip_far-0.1), // Defines visible distance of other objects
             glm::vec2(1.0, 1.0), true, true, 
             glm::vec3(1.0, 1.0, 1.0),
             glm::vec4(0.05, 0.01, 0.06, 0.2),
         );
-        let skybox_vao = unsafe { skybox_mesh.mkvao() };
-        let mut skybox_node = SceneNode::from_vao(skybox_vao);
+        let mut skybox_node = SceneNode::from_vao(unsafe { skybox_mesh.mkvao() });
         skybox_node.node_type = SceneNodeType::Skybox;
 
 
         // Small earth-like planet
-        let mut planet0 = planet::Planet::new();
+        let mut planet0 = planet::Planet::with_seed(4393);
         planet0.noise_params = planet::PlanetParameters {
-            seed: 328342.03455,
             size: 10.0,
             height: 0.05,
-            niter: 1
+            niter: 1,
+            ..Default::default()
         };
         let mut planet0_node = scene_graph::SceneNode::with_type(SceneNodeType::PlanetSkip);
         planet0_node.scale *= 20.0;
         planet0_node.position = glm::vec3(-10.0, 2.0, 0.0);
         unsafe { planet0.lod(&mut planet0_node, position) };
 
-        // Large waterless planet
-        let mut planet1 = planet::Planet::new();
-        planet1.has_ocean = false;
-        planet1.noise_params = planet::PlanetParameters {
-            seed: 2786.431,
-            size: 10.002,
-            height: 0.005,
-            niter: 1
-        };
-        let mut planet1_node = scene_graph::SceneNode::with_type(SceneNodeType::PlanetSkip);
-        planet1_node.scale *= 40.0;
-        planet1_node.position = glm::vec3(50.0, 15.0, 40.0);
-        unsafe { planet1.lod(&mut planet1_node, position) };
+        // // Large waterless planet
+        // let mut planet1 = planet::Planet::new();
+        // planet1.has_ocean = false;
+        // planet1.noise_params = planet::PlanetParameters {
+        //     seed: 2786.431,
+        //     size: 10.002,
+        //     height: 0.005,
+        //     niter: 1
+        // };
+        // let mut planet1_node = scene_graph::SceneNode::with_type(SceneNodeType::PlanetSkip);
+        // planet1_node.scale *= 40.0;
+        // planet1_node.position = glm::vec3(50.0, 15.0, 40.0);
+        // unsafe { planet1.lod(&mut planet1_node, position) };
 
-        // Sun
-        let mut planet2 = planet::Planet::new();
-        planet2.has_ocean = false;
-        planet2.emission = glm::vec3(0.9,0.6,0.4);
-        planet2.noise_params = planet::PlanetParameters {
-            seed: 54320.6123,
-            size: 7.5,
-            height: 0.01,
-            niter: 1
-        };
-        let mut planet2_node = scene_graph::SceneNode::with_type(SceneNodeType::PlanetSkip);
-        planet2_node.scale *= 52.0;
-        planet2_node.position = glm::vec3(80.0, 15.0, -48.0);
-        unsafe { planet2.lod(&mut planet2_node, position) };
+        // // Sun
+        // let mut planet2 = planet::Planet::new();
+        // planet2.has_ocean = false;
+        // planet2.emission = glm::vec3(0.9,0.6,0.4);
+        // planet2.noise_params = planet::PlanetParameters {
+        //     seed: 54320.6123,
+        //     size: 7.5,
+        //     height: 0.01,
+        //     niter: 1
+        // };
+        // let mut planet2_node = scene_graph::SceneNode::with_type(SceneNodeType::PlanetSkip);
+        // planet2_node.scale *= 52.0;
+        // planet2_node.position = glm::vec3(80.0, 15.0, -48.0);
+        // unsafe { planet2.lod(&mut planet2_node, position) };
 
-        let planets = vec![planet0, planet1, planet2];
-        let planet_nodes = vec![planet0_node, planet1_node, planet2_node];
+        // let planets = vec![planet0, planet1, planet2];
+        // let planet_nodes = vec![planet0_node, planet1_node, planet2_node];
 
 
         //---------------------------------------------------------------------/
@@ -288,7 +287,7 @@ fn main() {
         //---------------------------------------------------------------------/
         let mut scene_root = SceneNode::new();
         scene_root.add_child(&skybox_node);
-        // scene_root.add_child(&planet_nodes[0]);
+        scene_root.add_child(&planet0_node);
         // scene_root.add_child(&planet_nodes[1]);
         // scene_root.add_child(&planet_nodes[2]);
 

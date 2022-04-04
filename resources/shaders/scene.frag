@@ -19,20 +19,33 @@ uniform float u_time;
 uniform uint u_node_type;
 uniform bool u_has_texture;
 
+#define N_LAYERS 5
+
 uniform struct Planet {
     uint planet_id;     // Unique ID for each planet
+    // Geometry
     vec3 position;      // Planet's position
     vec3 rotation;      // Planet's rotation (for mapping noise correctly)
     uint radius;        // Planet's radius
+    // Lighting
     vec3 emission;      // Emission colour (most relevant for a star)
     vec3 reflection;    // Reflection colour or quotient?
+    // Terrain colours
+    bool has_terrain;   // Does planet have terrain (false for stars, gas planets)
+    vec3 color_scheme[N_LAYERS];        // Colours of height map
+    float color_thresholds[N_LAYERS];   // Levels for changing colour
+    float color_blending;               // Level of blending between colours
+    // Ocean colours
     bool has_ocean;     // Does planet have an ocean
     vec3 ocean_dark_color;  // Colour of the ocean
     vec3 ocean_light_color; // Colour of the ocean
+    // Other noise parameters
     float noise_size;       // Noise parameters
     float noise_height;
     float noise_seed;
 } u_planets[];
+
+// Array of planets
 uniform int u_planets_len;
 uniform uint u_closest_planet;
 
@@ -272,29 +285,34 @@ vec4 ocean_shader(vec3 ocean_dark_color, vec3 ocean_light_color)
 //-----------------------------------------------------------------------------/
 vec4 skybox_shader()
 {
-    vec3 pos = v_position;
-    vec3 sun = vec3(1.0, 1.0, 1.0);
+    vec3 pos = normalize(v_position);
+    // One sun as proof of concept for implicit rendering of planets on skybox
+    vec3 sun = vec3(1.0 + u_time * 1, 1.0 + u_time * 1, 1.0);
     vec3 sun_pos = (normalize(sun) + 1.0) / 2.0;
-    vec4 c;
+    float sun_rad = 1.0;
+
+    float r = sin(atan(sun_rad / length(pos - sun)));
+
+    // TODO: extend to apply for all but closest planet
+    for (int i = 0; i < 1; i++) {
+        if (sphere_sdf(pos, normalize(sun_pos), r) < 0) {
+            return vec4(0.8118, 0.3922, 0.0, 1.0);
+        }
+    }
+    // Starry sky if there's nothing else (not really optimized as this will have to be
+    // computed anyway :/ )
     vec3 res = vec3(2.0, 2.0, 2.0);
     vec3 st = (normalize(pos) + 1.0) / 2.0;
     st *= 50.0;
     vec3 ipos = floor(st);
     vec3 fpos = fract(st);
-    float n = noise3d(st); // + noise3d(st * 2) * 0.5;// + noise3d(st * 4) * 0.25;
+    float n = noise3d(st);
     float sn = abs(n - 0.5);
     float radgrad = max(0.0, 1.0 - length(abs(fpos - 0.5)) / sn);
     radgrad *= radgrad;
+    
+    float v = rand2(vec2(rand2(st.xy), st.z));
 
-    // TODO: extend to apply for all but closest planet
-    if (sphere_sdf(pos, sun_pos, 0.5) < 0) {
-        c = vec4(0.8118, 0.3922, 0.0, 1.0);
-    }
-    else {
-        float v = rand2(vec2(rand2(st.xy), st.z));
+    return vec4(vec3(radgrad), 1.0);
 
-        c = vec4(vec3(radgrad), 1.0);
-    }
-
-    return c;
 }

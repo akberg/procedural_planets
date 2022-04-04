@@ -463,7 +463,7 @@ impl Mesh {
                     pos.x * (1.0 - pos.y.powi(2) / 2.0 - pos.z.powi(2) / 2.0 + pos.y.powi(2) * pos.z.powi(2) / 3.0).sqrt(),
                     pos.y * (1.0 - pos.x.powi(2) / 2.0 - pos.z.powi(2) / 2.0 + pos.x.powi(2) * pos.z.powi(2) / 3.0).sqrt(),
                     pos.z * (1.0 - pos.x.powi(2) / 2.0 - pos.y.powi(2) / 2.0 + pos.x.powi(2) * pos.y.powi(2) / 3.0).sqrt(),
-                ).component_mul(&scale) * 0.5;
+                ) * 0.5; // removed: .component_mul(&scale)
                 vertices[z * res + x] = pos;
 
                 texture[z * res + x] = glm::vec2(
@@ -497,70 +497,11 @@ impl Mesh {
         }
     }
 
-    /// (Not working) Generate a plane projected to a cubesphere from corner start to corner stop
-    /// * start and stop are points on the surface of the surrounding cube, meaning
-    /// one of their components should be equal
-    pub fn cs_part_plane(
-        //scale: glm::TVec3<f32>,
-        start: glm::TVec3<f32>,
-        stop: glm::TVec3<f32>,
-        subdivisions: usize, 
-        tiling_textures: bool
-    ) -> Self {
-        let res = 1 + subdivisions;
-        let vertex_count = res * res;
-        let index_count = 6 * (res-1) * (res-1);
-        let mut vertices = vec![glm::vec3(0.0, 0.0, 0.0); vertex_count];
-        let normals = vec![glm::vec3(0.0, 1.0, 0.0); vertex_count];
-        let mut texture = vec![glm::vec2(0.0, 0.0); vertex_count];
-        let mut indices = vec![0; index_count];
-
-        let diff = stop - start;
-        let step = diff / res as f32;
-        let mut pos = start;
-
-        for z in 0..res {
-            for x in 0..res {
-                // Flat plane
-                vertices[z * res + x] = pos;
-                // Side of cubesphere
-                // vertices[z * res + x] = glm::vec3(
-                //     pos.x * (1.0 - pos.y.powi(2) / 2.0 - pos.z.powi(2) / 2.0 + pos.y.powi(2) * pos.z.powi(2) / 3.0).sqrt(),
-                //     pos.y * (1.0 - pos.x.powi(2) / 2.0 - pos.z.powi(2) / 2.0 + pos.x.powi(2) * pos.z.powi(2) / 3.0).sqrt(),
-                //     pos.z * (1.0 - pos.x.powi(2) / 2.0 - pos.y.powi(2) / 2.0 + pos.x.powi(2) * pos.y.powi(2) / 3.0).sqrt(),
-                // ).component_mul(&scale) * 0.5;
-                texture[z * res + x] = glm::vec2(
-                    x as f32 / res as f32,
-                    z as f32 / res as f32,
-                );
-                if z < subdivisions && x < subdivisions {
-                    let offset = 6 * (z * subdivisions + x);
-                    indices[offset + 0] = (z * res + x + 1) as u32;
-                    indices[offset + 1] = (z * res + x + 0) as u32;
-                    indices[offset + 2] = ((z + 1) * res + x + 1) as u32;
-
-                    indices[offset + 3] = (z * res + x) as u32;
-                    indices[offset + 4] = ((z + 1) * res + x) as u32;
-                    indices[offset + 5] = ((z + 1) * res + x + 1) as u32;
-                }
-
-            }
-        }
-
-        Mesh {
-            vertices: from_array_of_vec3(vertices),
-            normals: from_array_of_vec3(normals),
-            texture_coordinates: from_array_of_vec2(texture),
-            colors: generate_color_vec(glm::vec4(1.0, 1.0, 1.0, 1.0), vertex_count),
-            indices,
-            index_count: index_count as i32,
-        }
-    }
 }
 
 use noise::Fbm;
 use noise::utils::SphereMapBuilder;
-use noise::{NoiseFn, Perlin};
+use noise::{NoiseFn, Perlin, Seedable};
 
 fn fractal_noise(generator: Perlin, point: &glm::TVec3<f32>, size: f64, height: f32, offset: f32) -> f32 {
     let mut noise_sum = 0.0;
@@ -570,9 +511,9 @@ fn fractal_noise(generator: Perlin, point: &glm::TVec3<f32>, size: f64, height: 
     for _ in 0..5 {
         let point = point * freq;
         noise_sum += generator.get([
-            point.x as f64 * size,
-            point.y as f64 * size,
-            point.z as f64 * size,
+            point.x as f64 * size, // + seed as f64,
+            point.y as f64 * size, // + seed as f64,
+            point.z as f64 * size, // + seed as f64,
         ]) as f32 * amp * height;
         freq *= 2.0;
         amp *= 0.5;
@@ -584,11 +525,12 @@ fn fractal_noise(generator: Perlin, point: &glm::TVec3<f32>, size: f64, height: 
 // TODO  be reused as computed bounding box.
 
 // TODO: Interpolated height colours (noise-rs probably has it already)
-pub fn displace_vertices(mesh: &mut Mesh, size: f64, height: f32, offset: f32) {
+pub fn displace_vertices(mesh: &mut Mesh, size: f64, height: f32, offset: f32, seed: u32) {
     let timer = std::time::SystemTime::now();
     eprint!("Generating noise . . . ");
     let mut vertices = to_array_of_vec3(mesh.vertices.clone());
-    let perlin = Perlin::new();
+    // TODO: Planet struct will create and pass Perlin object
+    let perlin = Perlin::new().set_seed(seed);
     // let fbm = Fbm::new();
     // let b = SphereMapBuilder::new(&fbm).set
     for i in 0..vertices.len() {
@@ -676,3 +618,64 @@ pub fn displace_vertices(mesh: &mut Mesh, size: f64, height: f32, offset: f32) {
 //     }
 // }
 
+
+
+    // /// (Not working) Generate a plane projected to a cubesphere from corner start to corner stop
+    // /// * start and stop are points on the surface of the surrounding cube, meaning
+    // /// one of their components should be equal
+    // pub fn cs_part_plane(
+    //     //scale: glm::TVec3<f32>,
+    //     start: glm::TVec3<f32>,
+    //     stop: glm::TVec3<f32>,
+    //     subdivisions: usize, 
+    //     tiling_textures: bool
+    // ) -> Self {
+    //     let res = 1 + subdivisions;
+    //     let vertex_count = res * res;
+    //     let index_count = 6 * (res-1) * (res-1);
+    //     let mut vertices = vec![glm::vec3(0.0, 0.0, 0.0); vertex_count];
+    //     let normals = vec![glm::vec3(0.0, 1.0, 0.0); vertex_count];
+    //     let mut texture = vec![glm::vec2(0.0, 0.0); vertex_count];
+    //     let mut indices = vec![0; index_count];
+
+    //     let diff = stop - start;
+    //     let step = diff / res as f32;
+    //     let mut pos = start;
+
+    //     for z in 0..res {
+    //         for x in 0..res {
+    //             // Flat plane
+    //             vertices[z * res + x] = pos;
+    //             // Side of cubesphere
+    //             // vertices[z * res + x] = glm::vec3(
+    //             //     pos.x * (1.0 - pos.y.powi(2) / 2.0 - pos.z.powi(2) / 2.0 + pos.y.powi(2) * pos.z.powi(2) / 3.0).sqrt(),
+    //             //     pos.y * (1.0 - pos.x.powi(2) / 2.0 - pos.z.powi(2) / 2.0 + pos.x.powi(2) * pos.z.powi(2) / 3.0).sqrt(),
+    //             //     pos.z * (1.0 - pos.x.powi(2) / 2.0 - pos.y.powi(2) / 2.0 + pos.x.powi(2) * pos.y.powi(2) / 3.0).sqrt(),
+    //             // ).component_mul(&scale) * 0.5;
+    //             texture[z * res + x] = glm::vec2(
+    //                 x as f32 / res as f32,
+    //                 z as f32 / res as f32,
+    //             );
+    //             if z < subdivisions && x < subdivisions {
+    //                 let offset = 6 * (z * subdivisions + x);
+    //                 indices[offset + 0] = (z * res + x + 1) as u32;
+    //                 indices[offset + 1] = (z * res + x + 0) as u32;
+    //                 indices[offset + 2] = ((z + 1) * res + x + 1) as u32;
+
+    //                 indices[offset + 3] = (z * res + x) as u32;
+    //                 indices[offset + 4] = ((z + 1) * res + x) as u32;
+    //                 indices[offset + 5] = ((z + 1) * res + x + 1) as u32;
+    //             }
+
+    //         }
+    //     }
+
+    //     Mesh {
+    //         vertices: from_array_of_vec3(vertices),
+    //         normals: from_array_of_vec3(normals),
+    //         texture_coordinates: from_array_of_vec2(texture),
+    //         colors: generate_color_vec(glm::vec4(1.0, 1.0, 1.0, 1.0), vertex_count),
+    //         indices,
+    //         index_count: index_count as i32,
+    //     }
+    // }
