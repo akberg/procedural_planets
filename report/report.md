@@ -20,6 +20,13 @@ toc: true
 # Showcase
 
 # Log
+* 4.4:
+    * Figured noise::Perlin can be seeded. Add seed and other parameters
+    * Timed Perlin on CPU, ~220 ms for 128 subdivisions, might be okay to keep it for now and focus on LoD/quad-tree
+    * Change far and near clipping to reduce artifacts
+    * Work on deciding parameters of planet generation, need to fix uniform passing soon
+* 1.4:
+    * Extracted noise GLSL functions to separate file, hacking a multifile shader
 * 26.3:
     * Might have found the way of doing planets. Put planet generation into the new lod function of the Planet struct.
     * Created a few planets
