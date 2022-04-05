@@ -44,12 +44,12 @@ impl LightSource {
 
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub enum SceneNodeType {
-    Geometry = 0,
-    Skybox = 1,
-    Geometry2d = 2,         // For gui
-    Planet = 3,
-    Ocean = 4,
-    LightSource,
+    Geometry = 0,   // Unused   
+    Skybox = 1,     // Skybox shader
+    Geometry2d = 2, // For gui
+    Planet = 3,     // Planet terrain shader
+    Ocean = 4,      // Planet ocean shader
+    LightSource,    // Unused
     Empty,          // Empty nodes with other functions
     PlanetSkip,     // Planet, but skip this one, return
 }
@@ -223,6 +223,7 @@ impl SceneNode {
     ) {
         // Check if node is drawable, set model specific uniforms, draw
         match self.node_type {
+        SceneNodeType::PlanetSkip => return,
         SceneNodeType::Geometry | 
         SceneNodeType::Geometry2d | 
         SceneNodeType::Planet | 
