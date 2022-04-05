@@ -9,6 +9,7 @@
 ![Playing with adding a height dependent colour map](report/images/planet-w-cheated-heightmap.png)
 ![Ocean and skybox](report/images/planet-skybox-ocean.png)
 ![Abstraction to make two planets at once](report/images/two-planets.png)
+![Implicit shapes, still missing texturing](report/images/implicit_planets_one_mesh.png)
 
 ## Project description: Procedurally generated planet
 

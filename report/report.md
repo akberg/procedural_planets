@@ -20,6 +20,10 @@ toc: true
 # Showcase
 
 # Log
+* 5.4:
+    * Work on skybox shader to render implicit shapes for planets
+    * Switching of closest planet
+    * Planet uniforms, allowing differently coloured planets:)
 * 4.4:
     * Figured noise::Perlin can be seeded. Add seed and other parameters
     * Timed Perlin on CPU, ~220 ms for 128 subdivisions, might be okay to keep it for now and focus on LoD/quad-tree
