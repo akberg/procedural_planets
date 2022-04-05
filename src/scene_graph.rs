@@ -2,8 +2,11 @@ extern crate nalgebra_glm as glm;
 
 use std::mem::ManuallyDrop;
 use std::pin::Pin;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::{mesh, util};
+
+static NODE_COUNTER: AtomicU64 = AtomicU64::new(0);
 
 // Used to create an unholy abomination upon which you should not cast your gaze. This ended up
 // being a necessity due to wanting to keep the code written by students as "straight forward" as
@@ -47,11 +50,12 @@ pub enum SceneNodeType {
     Planet = 3,
     Ocean = 4,
     LightSource,
-    Empty,          // "Empty" i.e. don't draw
-    PlanetSkip,
+    Empty,          // Empty nodes with other functions
+    PlanetSkip,     // Planet, but skip this one, return
 }
 
 pub struct SceneNode {
+    pub node_id         : usize,
     pub position        : glm::Vec3,   // Where I am in relation to my parent
     pub rotation        : glm::Vec3,   // How I should be rotated
     pub scale           : glm::Vec3,   // How I should be scaled
@@ -74,6 +78,7 @@ impl SceneNode {
 
     pub fn new() -> Node {
         ManuallyDrop::new(Pin::new(Box::new(SceneNode {
+            node_id: NODE_COUNTER.fetch_add(1, Ordering::Relaxed) as usize,
             position        : glm::zero(),
             rotation        : glm::zero(),
             scale           : glm::vec3(1.0, 1.0, 1.0),
@@ -90,6 +95,7 @@ impl SceneNode {
 
     pub fn with_type(node_type: SceneNodeType) -> Node {
         ManuallyDrop::new(Pin::new(Box::new(SceneNode {
+            node_id: NODE_COUNTER.fetch_add(1, Ordering::Relaxed) as usize,
             position        : glm::zero(),
             rotation        : glm::zero(),
             scale           : glm::vec3(1.0, 1.0, 1.0),
@@ -106,6 +112,7 @@ impl SceneNode {
 
     pub fn from_vao(vao: mesh::VAOobj) -> Node {
         ManuallyDrop::new(Pin::new(Box::new(SceneNode {
+            node_id: NODE_COUNTER.fetch_add(1, Ordering::Relaxed) as usize,
             position        : glm::zero(),
             rotation        : glm::zero(),
             scale           : glm::vec3(1.0, 1.0, 1.0),
@@ -309,95 +316,6 @@ impl SceneNode {
                         tbuf_size,
                         tbuf_data as *const _,
                         gl::STATIC_DRAW); 
-    }
-
-    /// Generate composite mesh cubesphere
-    pub fn make_cubesphere(
-        scale: glm::TVec3<f32>,
-        rotation: glm::TVec3<f32>,
-        position: glm::TVec3<f32>,
-        subdivisions: usize,
-        color: Option<glm::TVec4<f32>>
-    ) -> Node {
-        let mut cubesphere = SceneNode::with_type(SceneNodeType::Empty);
-        cubesphere.scale = scale;
-        let subdivisions = 256;
-        let color = glm::vec4(0.2, 0.8, 0.4, 1.0);
-
-        // Top
-        let mut plane0_mesh = mesh::Mesh::cs_plane(
-            glm::vec3(1.0, 1.0, 1.0), 
-            glm::vec3(0.0, 0.0, 0.0),
-            glm::vec3(0.0, 1.0, 0.0),
-            subdivisions, true,
-            Some(color)
-        );
-        let plane0_vao = unsafe { plane0_mesh.mkvao() };
-        let mut plane0_node = SceneNode::from_vao(plane0_vao);
-        plane0_node.node_type = SceneNodeType::Planet;
-        // Bottom
-        let mut plane1_mesh = mesh::Mesh::cs_plane(
-            glm::vec3(1.0, 1.0, 1.0), 
-            glm::vec3(std::f32::consts::PI, 0.0, 0.0),
-            glm::vec3(0.0, -1.0, 0.0),
-            subdivisions, true,
-            Some(color)
-        );
-        let plane1_vao = unsafe { plane1_mesh.mkvao() };
-        let mut plane1_node = SceneNode::from_vao(plane1_vao);
-        plane1_node.node_type = SceneNodeType::Planet;
-        // Front
-        let mut plane2_mesh = mesh::Mesh::cs_plane(
-            glm::vec3(1.0, 1.0, 1.0), 
-            glm::vec3(std::f32::consts::FRAC_PI_2, 0.0, 0.0),
-            glm::vec3(0.0, 0.0, 1.0),
-            subdivisions, true,
-            Some(color)
-        );
-        let plane2_vao = unsafe { plane2_mesh.mkvao() };
-        let mut plane2_node = SceneNode::from_vao(plane2_vao);
-        plane2_node.node_type = SceneNodeType::Planet;
-        // Back
-        let mut plane3_mesh = mesh::Mesh::cs_plane(
-            glm::vec3(1.0, 1.0, 1.0), 
-            glm::vec3(-std::f32::consts::FRAC_PI_2, 0.0, 0.0),
-            glm::vec3(0.0, 0.0, -1.0),
-            subdivisions, true,
-            Some(color)
-        );
-        let plane3_vao = unsafe { plane3_mesh.mkvao() };
-        let mut plane3_node = SceneNode::from_vao(plane3_vao);
-        plane3_node.node_type = SceneNodeType::Planet;
-        // Left
-        let mut plane4_mesh = mesh::Mesh::cs_plane(
-            glm::vec3(1.0, 1.0, 1.0), 
-            glm::vec3(0.0, 0.0, -std::f32::consts::FRAC_PI_2),
-            glm::vec3(1.0, 0.0, 0.0),
-            subdivisions, true,
-            Some(color)
-        );
-        let plane4_vao = unsafe { plane4_mesh.mkvao() };
-        let mut plane4_node = SceneNode::from_vao(plane4_vao);
-        plane4_node.node_type = SceneNodeType::Planet;
-        // Right
-        let mut plane5_mesh = mesh::Mesh::cs_plane(
-            glm::vec3(1.0, 1.0, 1.0), 
-            glm::vec3(0.0, 0.0, std::f32::consts::FRAC_PI_2),
-            glm::vec3(-1.0, 0.0, 0.0),
-            subdivisions, true,
-            Some(color)
-        );
-        let plane5_vao = unsafe { plane5_mesh.mkvao() };
-        let mut plane5_node = SceneNode::from_vao(plane5_vao);
-        plane5_node.node_type = SceneNodeType::Planet;
-        
-        cubesphere.add_child(&plane0_node);
-        cubesphere.add_child(&plane1_node);
-        cubesphere.add_child(&plane2_node);
-        cubesphere.add_child(&plane3_node);
-        cubesphere.add_child(&plane4_node);
-        cubesphere.add_child(&plane5_node);
-        cubesphere
     }
 }
 
