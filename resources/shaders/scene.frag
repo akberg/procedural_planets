@@ -15,6 +15,7 @@ in vec2 v_uv;
 in vec3 v_model_position;
 
 uniform float u_time;
+uniform vec3 u_player_position;
 
 uniform uint u_node_type;
 uniform bool u_has_texture;
@@ -26,27 +27,28 @@ uniform struct Planet {
     // Geometry
     vec3 position;      // Planet's position
     vec3 rotation;      // Planet's rotation (for mapping noise correctly)
-    uint radius;        // Planet's radius
+    float radius;        // Planet's radius
     // Lighting
     vec3 emission;      // Emission colour (most relevant for a star)
     vec3 reflection;    // Reflection colour or quotient?
     // Terrain colours
     bool has_terrain;   // Does planet have terrain (false for stars, gas planets)
+    float max_height;   // Maximum height of terrain
     vec3 color_scheme[N_LAYERS];        // Colours of height map
     float color_thresholds[N_LAYERS];   // Levels for changing colour
     float color_blending;               // Level of blending between colours
     // Ocean colours
     bool has_ocean;     // Does planet have an ocean
+    float ocean_lvl;        // Ocean level offset from radius
     vec3 ocean_dark_color;  // Colour of the ocean
     vec3 ocean_light_color; // Colour of the ocean
     // Other noise parameters
     float noise_size;       // Noise parameters
-    float noise_height;
-    float noise_seed;
-} u_planets[];
+    uint noise_seed;
+} u_planets[4];
 
 // Array of planets
-uniform int u_planets_len;
+uniform uint u_planets_len;
 uniform uint u_closest_planet;
 
 out vec4 color;
@@ -72,6 +74,8 @@ float hash13(vec3 p3);
 
 float noise2d(vec2 p);
 float noise3d(vec3 p);
+
+float fractal_noise3d(vec3 pos, float size, float height);
 //-noise.glsl header end-------------------------------------------------------/
 
 float sphere_sdf(vec3 pos, vec3 origo, float r)
@@ -121,22 +125,22 @@ vec4 planet_shader()
     vec3 diffuse_color = v_color.rgb;
     if (u_node_type == NODE_TYPE_PLANET) {
         if (h < -0.0001) {
-            diffuse_color = vec3(0.4, 0.4, 0.3);
+            diffuse_color = u_planets[u_closest_planet].color_scheme[0];//vec3(0.4, 0.4, 0.3);
         }
         // else if (h > -0.001 && h < 0.001) {
         //     diffuse_color = vec3(0.2, 0.2, 0.7);
         // }
         else if (h < 0.001) {
-            diffuse_color = vec3(0.7, 0.55, 0.0);
+            diffuse_color = u_planets[u_closest_planet].color_scheme[1];//vec3(0.4588, 0.4588, 0.4588);
         }
         else if (h < 0.014) {
-            diffuse_color = vec3(0.2, 0.6, 0.4);
+            diffuse_color = u_planets[u_closest_planet].color_scheme[2];//vec3(0.2, 0.6, 0.4);
         }
         else if (h < 0.024) {
-            diffuse_color = vec3(0.5, 0.4, 0.4);
+            diffuse_color = u_planets[u_closest_planet].color_scheme[3];//vec3(0.5, 0.4, 0.4);
         }
         else {
-            diffuse_color = vec3(1.0, 1.0, 1.0);
+            diffuse_color = u_planets[u_closest_planet].color_scheme[4];//vec3(1.0, 1.0, 1.0);
         }
     }
     // Lighting
@@ -285,20 +289,25 @@ vec4 ocean_shader(vec3 ocean_dark_color, vec3 ocean_light_color)
 //-----------------------------------------------------------------------------/
 vec4 skybox_shader()
 {
-    vec3 pos = normalize(v_position);
-    // One sun as proof of concept for implicit rendering of planets on skybox
-    vec3 sun = vec3(1.0 + u_time * 1, 1.0 + u_time * 1, 1.0);
-    vec3 sun_pos = (normalize(sun) + 1.0) / 2.0;
-    float sun_rad = 1.0;
+    vec4 c;
+    vec3 pos = normalize(v_position); // Texture position on skybox
+    float closest_element = -1.0;
 
-    float r = sin(atan(sun_rad / length(pos - sun)));
-
-    // TODO: extend to apply for all but closest planet
-    for (int i = 0; i < 1; i++) {
-        if (sphere_sdf(pos, normalize(sun_pos), r) < 0) {
-            return vec4(0.8118, 0.3922, 0.0, 1.0);
+    for (int i = 0; i < u_planets_len; i++) {
+        vec3 dir = u_planets[i].position - u_player_position;
+        vec3 dir_n = normalize(dir);//(normalize(p_pos) + 1.0) / 2.0;
+        float rad = u_planets[i].radius;
+        float r = rad / length(dir);
+        if ((length(dir) < closest_element || closest_element == -1)
+            && u_closest_planet != i
+            && sphere_sdf(pos, dir_n, r) < 0 
+        ) {
+            // Can call ocean and planet shaders with new positions as parameters
+            c = vec4(u_planets[i].color_scheme[2], 1.0);
+            closest_element = length(dir);
         }
     }
+    if (closest_element != -1) return c;
     // Starry sky if there's nothing else (not really optimized as this will have to be
     // computed anyway :/ )
     vec3 res = vec3(2.0, 2.0, 2.0);

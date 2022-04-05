@@ -203,48 +203,93 @@ fn main() {
 
         // Small earth-like planet
         let mut planet0 = planet::Planet::with_seed(4393);
-        planet0.noise_params = planet::PlanetParameters {
-            size: 10.0,
-            height: 0.05,
-            niter: 1,
-            ..Default::default()
-        };
-        let mut planet0_node = scene_graph::SceneNode::with_type(SceneNodeType::PlanetSkip);
-        planet0_node.scale *= 20.0;
-        planet0_node.position = glm::vec3(-10.0, 2.0, 0.0);
+        planet0.radius = 5.0;
+        planet0.max_height = 0.05;
+        planet0.noise_size = 10.0;
+        planet0.ocean_dark_color = glm::vec3(0.01, 0.2, 0.3);
+        planet0.ocean_light_color = glm::vec3(0.04, 0.3, 0.43);
+        planet0.color_scheme = [
+            glm::vec3(0.4, 0.4, 0.3),
+            glm::vec3(0.7, 0.55, 0.0),
+            glm::vec3(0.2, 0.6, 0.4),
+            glm::vec3(0.5, 0.4, 0.4),
+            glm::vec3(0.91, 1.0, 1.0),
+        ];
+        let mut planet0_node = scene_graph::SceneNode::with_type(SceneNodeType::Empty);
+        planet0_node.scale *= 10.0;
+        planet0_node.position = glm::vec3(50.0, 0.0, 0.0);
+        planet0.node = planet0_node.node_id;
         unsafe { planet0.lod(&mut planet0_node, position) };
 
-        // // Large waterless planet
-        // let mut planet1 = planet::Planet::new();
-        // planet1.has_ocean = false;
-        // planet1.noise_params = planet::PlanetParameters {
-        //     seed: 2786.431,
-        //     size: 10.002,
-        //     height: 0.005,
-        //     niter: 1
-        // };
-        // let mut planet1_node = scene_graph::SceneNode::with_type(SceneNodeType::PlanetSkip);
-        // planet1_node.scale *= 40.0;
-        // planet1_node.position = glm::vec3(50.0, 15.0, 40.0);
-        // unsafe { planet1.lod(&mut planet1_node, position) };
 
-        // // Sun
-        // let mut planet2 = planet::Planet::new();
-        // planet2.has_ocean = false;
-        // planet2.emission = glm::vec3(0.9,0.6,0.4);
-        // planet2.noise_params = planet::PlanetParameters {
-        //     seed: 54320.6123,
-        //     size: 7.5,
-        //     height: 0.01,
-        //     niter: 1
-        // };
-        // let mut planet2_node = scene_graph::SceneNode::with_type(SceneNodeType::PlanetSkip);
-        // planet2_node.scale *= 52.0;
-        // planet2_node.position = glm::vec3(80.0, 15.0, -48.0);
-        // unsafe { planet2.lod(&mut planet2_node, position) };
+        // Other planet
+        let mut planet1 = planet::Planet::with_seed(4393);
+        planet1.radius = 5.0;
+        planet1.max_height = 0.05;
+        planet1.noise_size = 10.0;
+        planet1.ocean_dark_color = glm::vec3(0.01, 0.2, 0.3);
+        planet1.ocean_light_color = glm::vec3(0.04, 0.3, 0.43);
+        planet1.color_scheme = [
+            glm::vec3(0.6118, 0.3137, 0.1961),
+            glm::vec3(0.6118, 0.3137, 0.1961),
+            glm::vec3(0.6118, 0.3137, 0.1961),
+            glm::vec3(0.6118, 0.3137, 0.1961),
+            // glm::vec3(0.6118, 0.3137, 0.1961),
+            // glm::vec3(0.1686, 0.3922, 0.3176),
+            // glm::vec3(0.4588, 0.4588, 0.4588),
+            glm::vec3(0.91, 1.0, 1.0),
+        ];
+        let mut planet1_node = scene_graph::SceneNode::with_type(SceneNodeType::Empty);
+        planet1_node.scale *= 10.0;
+        planet1_node.position = glm::vec3(-50.0, 0.0, 0.0);
+        planet1.node = planet1_node.node_id;
+        unsafe { planet1.lod(&mut planet1_node, position) };
 
-        // let planets = vec![planet0, planet1, planet2];
-        // let planet_nodes = vec![planet0_node, planet1_node, planet2_node];
+
+        // Small mars-like planet
+        let mut planet2 = planet::Planet::with_seed(4393);
+        planet2.radius = 5.0;
+        planet2.max_height = 0.05;
+        planet2.noise_size = 10.0;
+        planet2.has_ocean = false;
+        planet2.color_scheme = [
+            glm::vec3(0.6118, 0.1255, 0.1255),
+            glm::vec3(0.7, 0.55, 0.0),
+            glm::vec3(0.7804, 0.2275, 0.0118),
+            glm::vec3(0.8275, 0.302, 0.0),
+            glm::vec3(0.91, 1.0, 1.0),
+        ];
+        let mut planet2_node = scene_graph::SceneNode::with_type(SceneNodeType::Empty);
+        planet2_node.scale *= 10.0;
+        planet2_node.position = glm::vec3(00.0, 0.0, 50.0);
+        planet2.node = planet2_node.node_id;
+        unsafe { planet2.lod(&mut planet2_node, position) };
+
+
+        // Small mars-like planet
+        let mut planet3 = planet::Planet::with_seed(4393);
+        planet3.radius = 5.0;
+        planet3.max_height = 0.05;
+        planet3.noise_size = 10.0;
+        planet3.has_ocean = false;
+        planet3.color_scheme = [
+            glm::vec3(0.8, 1.0, 0.6),
+            glm::vec3(0.8, 1.0, 0.6),
+            glm::vec3(0.8, 1.0, 0.6),
+            glm::vec3(0.8, 1.0, 0.6),
+            glm::vec3(0.8, 1.0, 0.6),
+        ];
+        let mut planet3_node = scene_graph::SceneNode::with_type(SceneNodeType::Empty);
+        planet3_node.scale *= 10.0;
+        planet3_node.position = glm::vec3(00.0, 0.0, -50.0);
+        planet3.node = planet3_node.node_id;
+        unsafe { planet3.lod(&mut planet3_node, position) };
+
+
+
+        let mut planets = vec![planet0, planet1, planet2, planet3];
+        let mut planet_nodes = vec![planet0_node, planet1_node, planet2_node, planet3_node];
+        let mut closest_planet_id  = 0;
 
 
         //---------------------------------------------------------------------/
@@ -287,9 +332,10 @@ fn main() {
         //---------------------------------------------------------------------/
         let mut scene_root = SceneNode::new();
         scene_root.add_child(&skybox_node);
-        scene_root.add_child(&planet0_node);
-        // scene_root.add_child(&planet_nodes[1]);
-        // scene_root.add_child(&planet_nodes[2]);
+        scene_root.add_child(&planet_nodes[0]);
+        scene_root.add_child(&planet_nodes[1]);
+        scene_root.add_child(&planet_nodes[2]);
+        scene_root.add_child(&planet_nodes[3]);
 
         unsafe { scene_root.update_node_transformations(&glm::identity()); }
 
@@ -352,8 +398,8 @@ fn main() {
                             // heli_body_nodes[n_helis].position -= right * delta_time * movement_speed;
                             // position -= right * delta_time * movement_speed;
                             position -= match player_state {
-                                FreeFloat => right * delta_time * movement_speed,
-                                Anchored(a) => right * delta_time * movement_speed,
+                                FreeFloat => right * delta_time * conf.movement_speed,
+                                Anchored(a) => right * delta_time * conf.movement_speed,
                             }
                         },
                         VirtualKeyCode::D => {
@@ -492,27 +538,74 @@ fn main() {
                 conf.clip_far   // far
             );
 
-            //-------------------------------------------------------------/
+            //-----------------------------------------------------------------/
             // Draw section
-            //-------------------------------------------------------------/
+            //-----------------------------------------------------------------/
             unsafe {
+                //-------------------------------------------------------------/
                 // Global uniforms
+                //-------------------------------------------------------------/
                 let u_time = sh.get_uniform_location("u_time");
                 gl::Uniform1f(u_time, timestamp.elapsed().unwrap().as_secs_f32());
-
+                
+                //-------------------------------------------------------------/
                 // First person view
+                //-------------------------------------------------------------/
                 let cam = glm::look_at(&position, &(position+direction), &up);
                 let perspective_view = perspective_mat * cam;
                 // let perspective_view = perspective_mat * glm::look_at(&position, &heli_body_nodes[n_helis].position, &up);
-
-                // Clear background
+                
+                //-------------------------------------------------------------/
+                // Clear background, set polygon mode
+                //-------------------------------------------------------------/
                 gl::ClearColor(conf.bg_color[0], conf.bg_color[1], conf.bg_color[2], conf.bg_color[3]);
                 gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
-
-                /* Draw scene graph */
                 gl::PolygonMode(gl::FRONT_AND_BACK, POLYMODES[conf.polymode]);
+                
+                //-------------------------------------------------------------/
+                // Planet transforms and update uniforms
+                //-------------------------------------------------------------/
                 scene_root.update_node_transformations(&glm::identity());
+                
+                let mut closest_planet = std::f32::MAX;
+                let mut closest_planet_node_id = 0;
+                for (node, mut planet) in planet_nodes.iter().zip(&mut planets) {
+                    planet.position = node.position;
+                    planet.rotation = node.rotation;
+                    planet.update_uniforms(&sh);
+                    if glm::length(&(planet.position - position)) < closest_planet {
+                        closest_planet = glm::length(&(planet.position - position));
+                        closest_planet_id = planet.planet_id;
+                        closest_planet_node_id = planet.node;
+                    }
+                }
+                for node in &mut planet_nodes {
+                    if node.node_id == closest_planet_node_id {
+                        node.node_type = SceneNodeType::Empty;
+                    }
+                    else {
+                        node.node_type = SceneNodeType::PlanetSkip;
+                    }
+                }
+                gl::Uniform1ui(
+                    sh.get_uniform_location("u_planets_len"),
+                    planets.len() as u32
+                );
+                gl::Uniform1ui(
+                    sh.get_uniform_location("u_closest_planet"),
+                    closest_planet_id as u32
+                );
+                gl::Uniform3fv(
+                    sh.get_uniform_location("u_player_position"),
+                    1,
+                    position.as_ptr()
+                );
+
                 scene_root.draw_scene(&perspective_view, &sh);
+
+                //-------------------------------------------------------------/
+                // Draw GUI if enabled
+                //-------------------------------------------------------------/
                 if draw_gui {
                     gui_root.update_node_transformations(&glm::identity());
                     gui_root.draw_scene(&perspective_view, &sh);

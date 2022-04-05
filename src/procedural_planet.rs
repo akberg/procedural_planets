@@ -8,8 +8,8 @@ static PLANET_COUNTER: AtomicU64 = AtomicU64::new(0);
 /// Thresholds for level of detail
 const MAX_LOD: usize = 6;
 const THRESHOLD: [f32; MAX_LOD] = [128.0, 32.0, 16.0, 8.0, 4.0, 2.0];
-const SUBDIVS_PER_LEVEL: usize = 128; // 256: 480+380=860ms, 128: 127+98=225ms
-const N_LAYERS: usize = 5;
+const SUBDIVS_PER_LEVEL: usize = 48; // 256: 480+380=860ms, 128: 127+98=225ms
+const N_LAYERS: usize = 5;  // Must match with scene.frag:22
 
 
 /// Procedurally generated planet. Will use a quad-tree form, each side
@@ -58,10 +58,10 @@ const N_LAYERS: usize = 5;
 ///         +---bottom
 #[derive(Default, Debug)]
 pub struct Planet {
-    //pub node        : scene_graph::Node,// scene node kept separate
+    pub node        : usize,// scene node kept separate
     pub planet_id   : usize,
-    //pub position    : glm::TVec3<f32>,// Handled by scene node
-    //pub rotation    : glm::TVec3<f32>,// Handled by scene node
+    pub position    : glm::TVec3<f32>,  // Handled by scene node
+    pub rotation    : glm::TVec3<f32>,  // Handled by scene node
     pub radius      : f32,              // Radius to ocean level
 
     // Lighting
@@ -69,8 +69,9 @@ pub struct Planet {
     pub reflection  : glm::TVec3<f32>,  // Reflection colour and intensity
     // Terrain
     pub has_terrain : bool,
+    pub max_height  : f32,
     pub color_scheme: [glm::TVec3<f32>; N_LAYERS],
-    pub coloru_thresholds   : [f32; N_LAYERS],
+    pub color_thresholds   : [f32; N_LAYERS],
     pub color_blending      : f32,
     // Ocean colours
     pub has_ocean   : bool,             // Set true to include ocean
@@ -79,22 +80,25 @@ pub struct Planet {
     pub ocean_light_color   : glm::TVec3<f32>,
 
     pub noise_fn    : noise::Perlin,
-    pub noise_params    : PlanetParameters,
+    pub seed        : u32,
+    pub noise_size  : f32,
 }
 
 use noise::*;
 impl Planet {
     pub fn new() -> Self {
         let planet_id = PLANET_COUNTER.fetch_add(1, Ordering::Relaxed) as usize;
-
+        let seed = rand::random::<_>();
         Planet {
+            node        : std::usize::MAX,
             radius      : 1.0,
             planet_id,
             emission    : glm::vec3(0.0, 0.0, 0.0),
             has_ocean   : true,
             ocean_lvl   : 0.0,
-            noise_fn    : noise::Perlin::new(),
-            noise_params: PlanetParameters { seed: rand::random::<_>(), ..Default::default() },
+            noise_fn    : noise::Perlin::new().set_seed(seed),
+            seed,
+            noise_size  : 10.0,
             ..Default::default()
         }
     }
@@ -102,22 +106,105 @@ impl Planet {
         let planet_id = PLANET_COUNTER.fetch_add(1, Ordering::Relaxed) as usize;
 
         Planet {
+            node        : std::usize::MAX,
             radius      : 1.0,
             planet_id,
             emission    : glm::vec3(0.0, 0.0, 0.0),
             has_ocean   : true,
             ocean_lvl   : 0.0,
             noise_fn    : noise::Perlin::new().set_seed(seed),
-            noise_params: PlanetParameters { ..Default::default() },
+            seed,
+            noise_size  : 10.0,
             ..Default::default()
         }
     }
     
     /// Update uniforms for planet in shader
     pub unsafe fn update_uniforms(&self, sh: &Shader) {
-        let u_planet_id = sh.get_uniform_location(&format!("u_planets[{}].planet_id", self.planet_id));
-        gl::Uniform1ui(u_planet_id, self.planet_id as u32);
-        let u_radius = sh.get_uniform_location(&format!("u_planets[{}].radius", self.planet_id));
+        gl::Uniform1ui(
+            sh.get_uniform_location(&format!("u_planets[{}].planet_id", self.planet_id)), 
+            self.planet_id as u32
+        ); // u_planets[id].planet_id
+        gl::Uniform3fv(
+            sh.get_uniform_location(&format!("u_planets[{}].position", self.planet_id)),
+            1,
+            self.position.as_ptr()
+        ); // u_planets[id].position
+        gl::Uniform3fv(
+            sh.get_uniform_location(&format!("u_planets[{}].rotation", self.planet_id)),
+            1,
+            self.rotation.as_ptr()
+        ); // u_planets[id].rotation
+        gl::Uniform1f(
+            sh.get_uniform_location(&format!("u_planets[{}].radius", self.planet_id)),
+            self.radius
+        ); // u_planets[id].radius
+        //-Lighting------------------------------------------------------------/
+        gl::Uniform3fv(
+            sh.get_uniform_location(&format!("u_planets[{}].emission", self.planet_id)),
+            1,
+            self.emission.as_ptr()
+        ); // u_planets[id].emission
+        gl::Uniform3fv(
+            sh.get_uniform_location(&format!("u_planets[{}].reflection", self.planet_id)),
+            1,
+            self.emission.as_ptr()
+        ); // u_planets[id].reflection
+        //-Terrain-------------------------------------------------------------/
+        gl::Uniform1ui(
+            sh.get_uniform_location(&format!("u_planets[{}].has_terrain", self.planet_id)),
+            self.has_terrain as u32
+        ); // u_planets[id].has_terrain
+        gl::Uniform3fv(
+            sh.get_uniform_location(&format!("u_planets[{}].noise_height", self.planet_id)),
+            1,
+            self.ocean_light_color.as_ptr()
+        ); // u_planets[id].noise_height
+        for i in 0..N_LAYERS {
+            gl::Uniform3fv(
+                sh.get_uniform_location(&format!("u_planets[{}].color_scheme[{}]", self.planet_id, i)),
+                1,
+                self.color_scheme[i].as_ptr()
+            ); // u_planets[id].color_scheme[i..N_LAYERS]
+            gl::Uniform1f(
+                sh.get_uniform_location(&format!("u_planets[{}].color_thresholds[{}]", self.planet_id, i)),
+                self.color_thresholds[i]
+            ); // u_planets[id].color_thresholds[i..N_LAYERS]
+        }
+        gl::Uniform1f(
+            sh.get_uniform_location(&format!("u_planets[{}].color_blending", self.planet_id)),
+            self.color_blending
+        ); // u_planets[id].color_blending
+        //-Ocean---------------------------------------------------------------/
+        gl::Uniform1ui(
+            sh.get_uniform_location(&format!("u_planets[{}].has_ocean", self.planet_id)),
+            self.has_ocean as u32
+        ); // u_planets[id].has_ocean
+        gl::Uniform1f(
+            sh.get_uniform_location(&format!("u_planets[{}].ocean_lvl", self.planet_id)),
+            self.ocean_lvl
+        ); // u_planets[id].ocean_lvl
+        gl::Uniform3fv(
+            sh.get_uniform_location(&format!("u_planets[{}].ocean_dark_color", self.planet_id)),
+            1,
+            self.ocean_dark_color.as_ptr()
+        ); // u_planets[id].ocean_dark_color
+        gl::Uniform3fv(
+            sh.get_uniform_location(&format!("u_planets[{}].ocean_dark_color", self.planet_id)),
+            1,
+            self.ocean_light_color.as_ptr()
+        ); // u_planets[id].ocean_light_color
+        // Other noise parameters
+        gl::Uniform1f(
+            sh.get_uniform_location(&format!("u_planets[{}].noise_size", self.planet_id)),
+            self.noise_size
+        ); // u_planets[id].noise_size
+        gl::Uniform1ui(
+            sh.get_uniform_location(&format!("u_planets[{}].noise_seed", self.planet_id)),
+            self.seed
+        ); // u_planets[id].noise_seed
+
+        
         // TODO: Get absolute position and other attributes
     }
     /// Set level of detail to be drawn, generate new if needed
@@ -144,7 +231,7 @@ impl Planet {
         // Handle top of tree and call lod_terrain for terrain sides
         // let mut planet_root;
         if node.get_n_children() < 1 {
-            let mut planet_root = scene_graph::SceneNode::with_type(SceneNodeType::PlanetSkip);
+            let mut planet_root = scene_graph::SceneNode::with_type(SceneNodeType::Empty);
             for _ in 0..6 {
                 // Generate nodes for sides if they don't exist yet
                 planet_root.add_child(&scene_graph::SceneNode::with_type(SceneNodeType::Planet));
@@ -206,10 +293,10 @@ impl Planet {
 
         let mut planet_mesh = mesh::Mesh::cs_plane(scale, rotation, position, SUBDIVS_PER_LEVEL, true, None);
         mesh::displace_vertices(&mut planet_mesh, 
-            self.noise_params.size.into(), 
-            self.noise_params.height, 
+            self.noise_size.into(), 
+            self.max_height, 
             0.0,
-            self.noise_params.seed
+            self.seed
         );
         node.update_vao(planet_mesh.mkvao());
         node.node_type = SceneNodeType::Planet;
