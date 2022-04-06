@@ -11,6 +11,14 @@
 ![Abstraction to make two planets at once](report/images/two-planets.png)
 ![Implicit shapes, still missing texturing](report/images/implicit_planets_one_mesh.png)
 
+## Controls
+
+* **W A S D**, **shift space**: Movement
+* **Up Down**: Increase or decrease movement speed
+* **F**: Toggle free float or anchor to center of gravity of closest planet
+* **I**: Toggle GUI
+* **M**: Cycle polygon modes (fill, lines, points)
+
 ## Project description: Procedurally generated planet
 
 For the final project I would like to make an attempt at creating a procedurally generated planet. I want to be able to render it from far away and have it become more detailed as the player closes in, which means having to apply some LoD techniques, e.g. partition the planet into chunks, resampling in higher resolution as a chunk comes closer, or adapting vertex count to local shape complexity. If this turns out too easy, I'd like to add more planets and place them in some solar system.

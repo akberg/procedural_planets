@@ -1,6 +1,6 @@
 extern crate nalgebra_glm as glm;
 use std::ffi::CString;
-use std::f64::consts::PI;
+#[allow(unused_imports)]
 use std::{ mem, ptr, os::raw::c_void };
 
 //-----------------------------------------------------------------------------/
@@ -84,8 +84,9 @@ pub struct Config {
     pub bg_color: [f32; 4],
     pub init_h_angle: f32,
     pub init_v_angle: f32,
-    pub camera_position: i32,
+    pub camera_position: CameraPosition,
     pub polymode: usize,
+    pub draw_gui: bool,
     //init_direction: [f32; 3],
 }
 
@@ -95,9 +96,9 @@ impl Config {
         use std::convert::TryInto;
         let mut s = val.trim().split(",");
         let mut arr = Vec::new();
-        for i in 0..D {
-            arr.push(s.next().unwrap().trim().parse::<T>().unwrap_or_else(|t| panic!("parse array")));
-        }
+        (0..D).for_each(|_| {
+            arr.push(s.next().unwrap().trim().parse::<T>().unwrap_or_else(|_t| panic!("Config::parse_array")));
+        });
         
         arr.try_into().unwrap()
     }
@@ -122,10 +123,11 @@ impl Config {
                     "tilt" => conf.tilt = val.trim().parse::<f32>().unwrap(),
                     "init_h_angle" => conf.init_h_angle = val.trim().parse::<f32>().unwrap(),
                     "init_v_angle" => conf.init_v_angle = val.trim().parse::<f32>().unwrap(),
-                    "camera_position" => conf.camera_position = val.trim().parse::<i32>().unwrap(),
+                    "camera_position" => conf.camera_position = num::FromPrimitive::from_u32(val.trim().parse::<u32>().unwrap()).unwrap(),
                     "init_position" => conf.init_position = Self::parse_array::<f32, 3>(val),
                     "bg_color" => conf.bg_color = Self::parse_array::<f32, 4>(val),
                     "polymode" => conf.polymode = val.trim().parse::<usize>().unwrap(),
+                    "draw_gui" => conf.draw_gui = val.trim() != "false",
                     //"init_direction" => conf.init_direction = Self::parse_array::<f32, 3>(val),
                     &_ => (),
                 }
@@ -155,61 +157,66 @@ pub fn vec_direction(h_angle: f32, v_angle: f32) -> glm::Vec3 {
 }
 
 
-pub struct Heading {
-    pub x     : f32,
-    pub z     : f32,
-    pub roll  : f32,
-    pub pitch : f32,
-    pub yaw   : f32,
-}
+// pub struct Heading {
+//     pub x     : f32,
+//     pub z     : f32,
+//     pub roll  : f32,
+//     pub pitch : f32,
+//     pub yaw   : f32,
+// }
 
-pub fn simple_heading_animation(time: f32) -> Heading {
-    let t             = time as f64;
-    let step          = 0.05f64;
-    let path_size     = 15f64;
-    let circuit_speed = 0.8f64;
+// pub fn simple_heading_animation(time: f32) -> Heading {
+//     let t             = time as f64;
+//     let step          = 0.05f64;
+//     let path_size     = 15f64;
+//     let circuit_speed = 0.8f64;
 
-    let xpos      = path_size * (2.0 * (t+ 0.0) * circuit_speed).sin();
-    let xpos_next = path_size * (2.0 * (t+step) * circuit_speed).sin();
-    let zpos      = 3.0 * path_size * ((t+ 0.0) * circuit_speed).cos();
-    let zpos_next = 3.0 * path_size * ((t+step) * circuit_speed).cos();
+//     let xpos      = path_size * (2.0 * (t+ 0.0) * circuit_speed).sin();
+//     let xpos_next = path_size * (2.0 * (t+step) * circuit_speed).sin();
+//     let zpos      = 3.0 * path_size * ((t+ 0.0) * circuit_speed).cos();
+//     let zpos_next = 3.0 * path_size * ((t+step) * circuit_speed).cos();
 
-    let delta_pos = glm::vec2(xpos_next - xpos, zpos_next - zpos);
+//     let delta_pos = glm::vec2(xpos_next - xpos, zpos_next - zpos);
 
-    let roll  = (t * circuit_speed).cos() * 0.5;
-    let pitch = -0.175 * glm::length(&delta_pos);
-    let yaw   = PI + delta_pos.x.atan2(delta_pos.y);
+//     let roll  = (t * circuit_speed).cos() * 0.5;
+//     let pitch = -0.175 * glm::length(&delta_pos);
+//     let yaw   = PI + delta_pos.x.atan2(delta_pos.y);
 
-    Heading {
-        x     : xpos  as f32,
-        z     : zpos  as f32,
-        roll  : roll  as f32,
-        pitch : pitch as f32,
-        yaw   : yaw   as f32,
-    }
-}
+//     Heading {
+//         x     : xpos  as f32,
+//         z     : zpos  as f32,
+//         roll  : roll  as f32,
+//         pitch : pitch as f32,
+//         yaw   : yaw   as f32,
+//     }
+// }
 
-pub fn door_animation(mut time: f32, starttime: f32, open: bool) -> (f32, f32) {
-    let (open_x, open_z) = (0.03f32, 1.5f32);
-    time = time - starttime;
-    if open {
-        (
-            open_x.min( open_x * 0.2 * time), 
-            open_z.min(if time < open_x / 0.2 { 0.0 } else { 0.2 * time }),
-        )
-    } else {
-        (
-            0.0f32.max(if time < open_z / 0.2 { open_x } else { open_x - open_x * 0.2 * time }), 
-            0.0f32.max(open_z - 0.2 * time),
-        )
-    }
-}
+// pub fn door_animation(mut time: f32, starttime: f32, open: bool) -> (f32, f32) {
+//     let (open_x, open_z) = (0.03f32, 1.5f32);
+//     time = time - starttime;
+//     if open {
+//         (
+//             open_x.min( open_x * 0.2 * time), 
+//             open_z.min(if time < open_x / 0.2 { 0.0 } else { 0.2 * time }),
+//         )
+//     } else {
+//         (
+//             0.0f32.max(if time < open_z / 0.2 { open_x } else { open_x - open_x * 0.2 * time }), 
+//             0.0f32.max(open_z - 0.2 * time),
+//         )
+//     }
+// }
 
-#[derive(PartialEq)]
+#[derive(Debug, PartialEq, Copy, Clone, num_derive::FromPrimitive)]
 pub enum CameraPosition { 
     ThirdPerson,        // Third person camera on helicopter
     FirstPerson,        // Camera on pilot head (not finished)
     //Chase
     //Free              // Free movement
+}
+impl Default for CameraPosition {
+    fn default() -> Self {
+        Self::FirstPerson
+    }
 }
 
