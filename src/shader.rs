@@ -10,6 +10,14 @@ pub struct Shader {
     pub program_id: u32,
 }
 
+/// Basic usage of shader helper:
+/// The example code below returns a shader object, which contains the field `.program_id`.
+/// The snippet is not enough to do the assignment, and will need to be modified (outside of
+/// just using the correct path), but it only needs to be called once
+///
+///     shader::ShaderBuilder::new()
+///        .attach_file("./path/to/shader.file")
+///        .link();
 pub struct ShaderBuilder {
     program_id: u32,
     shaders: Vec::<u32>,

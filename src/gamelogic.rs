@@ -32,14 +32,7 @@ pub fn render(
 
     let mut player = player::Player { ..Default::default() };
 
-    // Basic usage of shader helper:
-    // The example code below returns a shader object, which contains the field `.program_id`.
-    // The snippet is not enough to do the assignment, and will need to be modified (outside of
-    // just using the correct path), but it only needs to be called once
-    //
-    //     shader::ShaderBuilder::new()
-    //        .attach_file("./path/to/shader.file")
-    //        .link();
+
     //-------------------------------------------------------------------------/
     // Shaders and locating uniforms
     //-------------------------------------------------------------------------/
