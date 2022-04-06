@@ -20,6 +20,10 @@ toc: true
 # Showcase
 
 # Log
+* 6.4:
+    * Keep radius uniform consistent with actual scale
+    * Refactor game logic to keep `main.rs` small
+    * Add height check to make collision box for planets (needs work on accuracy)
 * 5.4:
     * Work on skybox shader to render implicit shapes for planets
     * Switching of closest planet
