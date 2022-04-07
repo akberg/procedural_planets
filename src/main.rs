@@ -24,8 +24,8 @@ use glutin::event::{
 
 use glutin::event_loop::ControlFlow;
 
-const SCREEN_W: u32 = 800;
-const SCREEN_H: u32 = 600;
+const SCREEN_W: u32 = 1920;
+const SCREEN_H: u32 = 1080;
 
 
 fn main() {
@@ -35,7 +35,9 @@ fn main() {
     let el = glutin::event_loop::EventLoop::new();
     let wb = glutin::window::WindowBuilder::new()
         .with_title("Procedural planets")
-        .with_resizable(false)
+        .with_fullscreen(Some(glutin::window::Fullscreen::Borderless(None)))
+        .with_resizable(true)
+        .with_maximized(true)
         .with_inner_size(glutin::dpi::LogicalSize::new(SCREEN_W, SCREEN_H))
         ;
     let cb = glutin::ContextBuilder::new()
@@ -43,8 +45,9 @@ fn main() {
     let windowed_context = cb.build_windowed(wb, &el).unwrap();
     // Uncomment these if you want to use the mouse for controls, but want it 
     // to be confined to the screen and/or invisible.
-    // windowed_context.window().set_cursor_grab(true).expect("failed to grab cursor");
-    // windowed_context.window().set_cursor_visible(false);
+    windowed_context.window().set_cursor_grab(true).expect("failed to grab cursor");
+    windowed_context.window().set_cursor_visible(false);
+
 
     // Set up a shared vector for keeping track of currently pressed keys
     let arc_pressed_keys = Arc::new(Mutex::new(Vec::<VirtualKeyCode>::with_capacity(10)));
@@ -126,6 +129,9 @@ fn main() {
             },
             Event::WindowEvent { event: WindowEvent::Resized(size), .. } => {
                 println!("Resized window to {} x {}", size.width, size.height);
+                // println!("inner size {:?} and outer size {:?}",
+                //     arc_context.window().inner_size(),
+                //     arc_context.window().outer_size());
             }
             // Keep track of currently pressed keys to send to the rendering thread
             Event::WindowEvent { event: WindowEvent::KeyboardInput {

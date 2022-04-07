@@ -210,6 +210,9 @@ pub fn render(
         glm::vec3(0.4, 0.8, 0.3),
         glm::vec3(0.9, 1.0, 1.0),
     ];
+    planet3.color_thresholds = [
+        -0.0005, 0.001, 0.014, 0.024
+    ];
     let mut planet3_node = scene_graph::SceneNode::with_type(SceneNodeType::Empty);
     planet3_node.scale *= 160.0;
     planet3_node.position = glm::vec3(00.0, 0.0, -150.0);
@@ -259,7 +262,11 @@ pub fn render(
     
 
     //-------------------------------------------------------------------------/
+    //-------------------------------------------------------------------------/
+    //
     // The main rendering loop
+    //
+    //-------------------------------------------------------------------------/
     //-------------------------------------------------------------------------/
     eprintln!("Setup done in {:?}. Starting rendering loop.", 
         setup_timer.elapsed().unwrap()
@@ -280,7 +287,7 @@ pub fn render(
                 keys, 
                 &mut key_debounce, 
                 &mut player, 
-                &planets[closest_planet_id].position,
+                &planets[closest_planet_id],
                 &mut conf, 
                 delta_time,
             );
@@ -290,13 +297,20 @@ pub fn render(
         // Handle mouse movement. delta contains the x and y movement of 
         // the mouse since last frame in pixels
         if let Ok(mut delta) = mouse_delta.lock() {
-            /* Look left/right (horizontal angle), rotate around y axis */
-            h_angle -= (*delta).0 * delta_time * conf.mouse_speed;
-            /* Look up/down (vertical angle), rotate around x axis */
-            v_angle -= (*delta).1 * delta_time * conf.mouse_speed;
-            player.direction = util::vec_direction(h_angle, v_angle);
-            player.right = util::vec_right(h_angle);
-            up = glm::cross(&player.right, &player.direction);
+            mouse_input(
+                &delta,
+                &mut player,
+                &planets[closest_planet_id],
+                &mut conf,
+                delta_time,
+            );
+            // /* Look left/right (horizontal angle), rotate around y axis */
+            // h_angle -= (*delta).0 * delta_time * conf.mouse_speed;
+            // /* Look up/down (vertical angle), rotate around x axis */
+            // v_angle -= (*delta).1 * delta_time * conf.mouse_speed;
+            // player.direction = util::vec_direction(h_angle, v_angle);
+            // player.right = util::vec_right(h_angle);
+            // //up = glm::cross(&player.right, &player.direction);
 
             *delta = (0.0, 0.0);
         }
@@ -355,6 +369,8 @@ pub fn render(
         //---------------------------------------------------------------------/
         // First person view
         //---------------------------------------------------------------------/
+        // TODO: Something's weird with camera and direction
+        let up = player.up();
         let cam = glm::look_at(&player.position, &(player.position+player.direction), &up);
         let perspective_view = perspective_mat * cam;
         // let perspective_view = perspective_mat * glm::look_at(&position, &heli_body_nodes[n_helis].position, &up);
@@ -439,36 +455,70 @@ pub fn render(
 }
 
 
+fn mouse_input(
+    delta: &std::sync::MutexGuard<'_, (f32, f32)>,
+    player: &mut player::Player,
+    closest_planet: &planet::Planet,
+    conf: &mut util::Config,
+    delta_time: f32
+) {
+    /* Look left/right (horizontal angle), rotate around y axis */
+    let delta_h = (*delta).0 * delta_time * conf.mouse_speed;
+    /* Look up/down (vertical angle), rotate around x axis */
+    let delta_v = (*delta).1 * delta_time * conf.mouse_speed;
+    let up = player.up();
+    match player.state {
+        player::PlayerState::Anchored(a) => {
+            // vertical angle rotates around right -> modifies only direction
+            player.direction = glm::rotate_vec3(
+                &player.direction, -delta_v, &player.right
+            );
+            // horizontal angle rotates around up -> modifies right and direction
+            player.direction = glm::rotate_vec3(
+                &player.direction, -delta_h, &up
+            );
+        },
+        player::PlayerState::FreeFloat => {
+            // vertical angle rotates around right -> modifies up and direction
+            player.direction = glm::rotate_vec3(
+                &player.direction, -delta_v, &player.right
+            );
+            // horizontal angle rotates around up -> modifies right and direction
+            player.direction = glm::rotate_vec3(
+                &player.direction, -delta_h, &glm::normalize(&up)
+            );
+
+        }
+    }
+    // player.direction = util::vec_direction(h_angle, v_angle);
+    // player.right = util::vec_right(h_angle);
+    //up = glm::cross(&player.right, &player.direction);
+}
+
+
 /// Handle keyboard input
 fn keyboard_input(
     keys: std::sync::MutexGuard<'_, std::vec::Vec<glutin::event::VirtualKeyCode>>, 
     key_debounce: &mut std::collections::HashMap<glutin::event::VirtualKeyCode, u32>,
     player: &mut player::Player,
-    closest_planet_position: &glm::TVec3<f32>,
+    closest_planet: &planet::Planet,
     conf: &mut util::Config,
     delta_time: f32
 ) {
     for key in keys.iter() {
         use player::PlayerState::*;
-        let up = match player.state {
-            Anchored(a) => glm::normalize(&(player.position - a)),
-            FreeFloat => glm::cross(&player.direction, &player.right),
-        };
-        let _flat_direction =  glm::normalize(
-            &glm::vec3(player.direction.x, 0.0, player.direction.z)
-        );
-        // Set movement relative to helicopter rotation
-        // let heli_direction = util::vec_direction(heli_body_nodes[n_helis].rotation.y, 0.0);
-        // let flat_direction = -heli_direction; //glm::normalize(&glm::vec3(heli_direction.x, 0.0, heli_direction.z));
-        // right = glm::cross(&flat_direction, &glm::vec3(0.0, 1.0, 0.0));
+        let up = player.up();
+        let _flat_direction = glm::cross(&up, &player.right);
+
         // TODO: Handle inputs in a state machine
+        let mut position = player.position;
         match key {
             /* Move left/right */
             VirtualKeyCode::A => {
                 // tilt_dir.1 = 1;
                 // heli_body_nodes[n_helis].position -= right * delta_time * movement_speed;
                 // position -= right * delta_time * movement_speed;
-                player.position -= match player.state {
+                position -= match player.state {
                     FreeFloat => player.right * delta_time * conf.movement_speed,
                     Anchored(_a) => player.right * delta_time * conf.movement_speed,
                 }
@@ -476,30 +526,30 @@ fn keyboard_input(
             VirtualKeyCode::D => {
                 // heli_body_nodes[n_helis].position += right * delta_time * movement_speed;
                 // position += right * delta_time * movement_speed;
-                player.position += match player.state {
+                position += match player.state {
                     FreeFloat => player.right * delta_time * conf.movement_speed,
                     Anchored(_a) => player.right * delta_time * conf.movement_speed,
                 }
             },
             /* Move forward (inward)/backward, in camera direction */
             VirtualKeyCode::W => {
-                player.position += match player.state {
+                position += match player.state {
                     FreeFloat => player.direction * delta_time * conf.movement_speed,
-                    Anchored(_a) => player.direction * delta_time * conf.movement_speed,
+                    Anchored(_a) => _flat_direction * delta_time * conf.movement_speed,
                 }
             },
             VirtualKeyCode::S => {
-                player.position -= match player.state {
+                position -= match player.state {
                     FreeFloat => player.direction * delta_time * conf.movement_speed,
-                    Anchored(_a) => player.direction * delta_time * conf.movement_speed,
+                    Anchored(_a) => _flat_direction * delta_time * conf.movement_speed,
                 }
             },
             /* Move up/down */
             VirtualKeyCode::Space => {
-                player.position += up * delta_time * conf.movement_speed
+                position += up * delta_time * conf.movement_speed
             },
             VirtualKeyCode::LShift => {
-                player.position -= up * delta_time * conf.movement_speed
+                position -= up * delta_time * conf.movement_speed
             },
             VirtualKeyCode::M => {
                 let v = key_debounce.entry(VirtualKeyCode::M).or_insert(0);
@@ -536,7 +586,7 @@ fn keyboard_input(
                     use player::PlayerState::*;
                     player.state = match player.state {
                         FreeFloat => {
-                            let a = *closest_planet_position;
+                            let a = closest_planet.position;
                             let up = glm::normalize(&(player.position - a));
                             player.right = glm::cross(&player.direction, &up);
                             Anchored(a)  // Later: anchor to closest planet
@@ -547,6 +597,20 @@ fn keyboard_input(
                 }
             }
             _ => { }
+        }
+
+        let height = closest_planet.get_height(&position);
+        let go_to = glm::length(&(position - closest_planet.position));
+        if go_to > height {
+            player.position = position;
+        }
+        else {
+            let dir = glm::rotate_vec3(
+                &(position - player.position), // requested movement direction
+                ((height - go_to) / glm::length(&player.direction)).atan(), 
+                &player.right
+            );
+            player.position += dir;
         }
     }
 }

@@ -19,3 +19,18 @@ pub struct Player {
 
     pub closest_planet_id: i32,
 }
+
+impl Player {
+    pub fn up(&mut self) -> glm::TVec3<f32> {
+        match self.state {
+            // Gravitational force from planet
+            PlayerState::Anchored(a) => {
+                let up = glm::normalize(&(self.position - a));
+                // Anchored planet sets horizontal direction
+                self.right = glm::normalize(&glm::cross(&self.direction, &up));
+                up
+            },
+            PlayerState::FreeFloat => glm::normalize(&glm::cross(&self.right, &self.direction)),
+        }
+    }
+}

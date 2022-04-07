@@ -503,7 +503,7 @@ use noise::Fbm;
 use noise::utils::SphereMapBuilder;
 use noise::{NoiseFn, Perlin, Seedable};
 
-fn fractal_noise(generator: Perlin, point: &glm::TVec3<f32>, size: f64, height: f32, offset: f32) -> f32 {
+pub fn fractal_noise(generator: Perlin, point: &glm::TVec3<f32>, size: f64, height: f32, offset: f32) -> f32 {
     let mut noise_sum = 0.0;
     let mut amp = 1.0;
     let mut freq = 1.0;
