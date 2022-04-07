@@ -71,7 +71,7 @@ pub struct Planet {
     pub has_terrain : bool,
     pub max_height  : f32,
     pub color_scheme: [glm::TVec3<f32>; N_LAYERS],
-    pub color_thresholds   : [f32; N_LAYERS],
+    pub color_thresholds   : [f32; N_LAYERS-1],
     pub color_blending      : f32,
     // Ocean colours
     pub has_ocean   : bool,             // Set true to include ocean
@@ -160,16 +160,21 @@ impl Planet {
             1,
             self.ocean_light_color.as_ptr()
         ); // u_planets[id].noise_height
-        for i in 0..N_LAYERS {
+        gl::Uniform3fv(
+            sh.get_uniform_location(&format!("u_planets[{}].color_scheme[{}]", self.planet_id, 0)),
+            1,
+            self.color_scheme[0].as_ptr()
+        ); // u_planets[id].color_scheme[]
+        for i in 0..N_LAYERS-1 {
             gl::Uniform3fv(
-                sh.get_uniform_location(&format!("u_planets[{}].color_scheme[{}]", self.planet_id, i)),
+                sh.get_uniform_location(&format!("u_planets[{}].color_scheme[{}]", self.planet_id, i+1)),
                 1,
-                self.color_scheme[i].as_ptr()
-            ); // u_planets[id].color_scheme[i..N_LAYERS]
+                self.color_scheme[i+1].as_ptr()
+            ); // u_planets[id].color_scheme[1..N_LAYERS]
             gl::Uniform1f(
                 sh.get_uniform_location(&format!("u_planets[{}].color_thresholds[{}]", self.planet_id, i)),
                 self.color_thresholds[i]
-            ); // u_planets[id].color_thresholds[i..N_LAYERS]
+            ); // u_planets[id].color_thresholds[0..N_LAYERS-1]
         }
         gl::Uniform1f(
             sh.get_uniform_location(&format!("u_planets[{}].color_blending", self.planet_id)),
@@ -263,6 +268,7 @@ impl Planet {
         let ocean_root = node.get_child(1);
         // Generate sides if needed
     }
+
     pub unsafe fn lod_terrain(&self, 
         node: &mut scene_graph::SceneNode,
         scale: glm::TVec3<f32>,
@@ -326,6 +332,15 @@ impl Planet {
         //     );
         //     // TODO: Displace vertices according to noise func
         // }
+    }
+
+    pub fn get_height(&self, pos: &glm::TVec3<f32>) -> f32 {
+        self.radius * (
+            1.0 + mesh::fractal_noise(
+                self.noise_fn, &glm::normalize(pos), 
+                self.noise_size.into(), self.max_height, 0.0
+            )
+        )
     }
 }
 

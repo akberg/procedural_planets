@@ -22,6 +22,10 @@ uniform bool u_has_texture;
 
 #define N_LAYERS 5
 
+// Array of planets
+#define MAX_PLANETS 64
+uniform uint u_planets_len;
+uniform uint u_closest_planet;
 uniform struct Planet {
     uint planet_id;     // Unique ID for each planet
     // Geometry
@@ -35,7 +39,7 @@ uniform struct Planet {
     bool has_terrain;   // Does planet have terrain (false for stars, gas planets)
     float max_height;   // Maximum height of terrain
     vec3 color_scheme[N_LAYERS];        // Colours of height map
-    float color_thresholds[N_LAYERS];   // Levels for changing colour
+    float color_thresholds[N_LAYERS-1]; // Levels for changing colour
     float color_blending;               // Level of blending between colours
     // Ocean colours
     bool has_ocean;     // Does planet have an ocean
@@ -45,11 +49,8 @@ uniform struct Planet {
     // Other noise parameters
     float noise_size;       // Noise parameters
     uint noise_seed;
-} u_planets[4];
+} u_planets[MAX_PLANETS];
 
-// Array of planets
-uniform uint u_planets_len;
-uniform uint u_closest_planet;
 
 out vec4 color;
 
