@@ -18,6 +18,7 @@ uniform float u_time;
 uniform vec3 u_player_position;
 
 uniform uint u_node_type;
+uniform uint u_current_planet_id;   // Just in case multiple planets should be rendered
 uniform bool u_has_texture;
 
 #define N_LAYERS 5
@@ -33,6 +34,7 @@ uniform struct Planet {
     vec3 rotation;      // Planet's rotation (for mapping noise correctly)
     float radius;        // Planet's radius
     // Lighting
+    bool lightsource;   // True if planet is a lightsource
     vec3 emission;      // Emission colour (most relevant for a star)
     vec3 reflection;    // Reflection colour or quotient?
     // Terrain colours
@@ -51,6 +53,8 @@ uniform struct Planet {
     uint noise_seed;
 } u_planets[MAX_PLANETS];
 
+uniform uint u_lightsources_len;
+uniform uint u_lightsources[MAX_PLANETS];
 
 out vec4 color;
 
@@ -83,11 +87,23 @@ float sphere_sdf(vec3 pos, vec3 origo, float r)
 {
     return length(pos - origo) - r;
 }
+// sphere of size ra centered at point ce, as implemented at https://www.iquilezles.org/www/articles/intersectors/intersectors.htm
+// (Cognite guest lecture)
+vec2 sphIntersect( in vec3 ro, in vec3 rd, in vec3 ce, float ra )
+{
+    vec3 oc = ro - ce;
+    float b = dot( oc, rd );
+    float c = dot( oc, oc ) - ra*ra;
+    float h = b*b - c;
+    if( h<0.0 ) return vec2(-1.0); // no intersection
+    h = sqrt( h );
+    return vec2( -b-h, -b+h );
+}
 
 //-----------------------------------------------------------------------------/
 // Shaders declarations
 //-----------------------------------------------------------------------------/
-vec4 planet_shader();
+vec4 planet_shader(vec3 position, vec3 normal, uint planet_id);
 vec4 skybox_shader();
 vec4 ocean_shader(vec3 ocean_dark_color, vec3 ocean_light_color);
 
@@ -97,10 +113,13 @@ void main()
     switch (u_node_type) {
     case NODE_TYPE_GEOMETRY:
     case NODE_TYPE_PLANET:
-        color = planet_shader();
+        color = planet_shader(v_position, v_normal, u_current_planet_id);
         break;
     case NODE_TYPE_OCEAN:
-        color = ocean_shader(vec3(0.01, 0.2, 0.3), vec3(0.04, 0.3, 0.43));
+        color = ocean_shader(
+            u_planets[u_current_planet_id].ocean_dark_color, 
+            u_planets[u_current_planet_id].ocean_dark_color
+        );
         break;
     case NODE_TYPE_SKYBOX:
         color = skybox_shader();
@@ -115,57 +134,65 @@ void main()
     }
 }
 
-vec4 planet_shader()
+vec4 planet_shader(vec3 position, vec3 normal, uint planet_id)
 {
-    // Normal noise
-    vec3 normal = v_normal;
-
     // Simple height map
     float radius = 10.0;
-    float h = (length(v_position) - 0.5) * 2.0;
+    float h = (length(position) - 0.5) * 2.0;
     vec3 diffuse_color = v_color.rgb;
     if (u_node_type == NODE_TYPE_PLANET) {
-        if (h < -0.0001) {
-            diffuse_color = u_planets[u_closest_planet].color_scheme[0];//vec3(0.4, 0.4, 0.3);
+        if (h < u_planets[planet_id].color_thresholds[0]) {
+            diffuse_color = u_planets[planet_id].color_scheme[0];//vec3(0.9137, 0.5176, 0.0);
         }
         // else if (h > -0.001 && h < 0.001) {
         //     diffuse_color = vec3(0.2, 0.2, 0.7);
         // }
-        else if (h < 0.001) {
-            diffuse_color = u_planets[u_closest_planet].color_scheme[1];//vec3(0.4588, 0.4588, 0.4588);
+        else if (h < u_planets[planet_id].color_thresholds[1]) {
+            diffuse_color = u_planets[planet_id].color_scheme[1];//vec3(0.4588, 0.4588, 0.4588);
         }
-        else if (h < 0.014) {
-            diffuse_color = u_planets[u_closest_planet].color_scheme[2];//vec3(0.2, 0.6, 0.4);
+        else if (h < u_planets[planet_id].color_thresholds[2]) {
+            diffuse_color = u_planets[planet_id].color_scheme[2];//vec3(0.2, 0.6, 0.4);
         }
-        else if (h < 0.024) {
-            diffuse_color = u_planets[u_closest_planet].color_scheme[3];//vec3(0.5, 0.4, 0.4);
+        else if (h < u_planets[planet_id].color_thresholds[3]) {
+            diffuse_color = u_planets[planet_id].color_scheme[3];//vec3(0.5, 0.4, 0.4);
         }
         else {
-            diffuse_color = u_planets[u_closest_planet].color_scheme[4];//vec3(1.0, 1.0, 1.0);
+            diffuse_color = u_planets[planet_id].color_scheme[4];//vec3(1.0, 1.0, 1.0);
         }
     }
     // Lighting
-    vec4 color;
+    // Constant light source (to be removed)
+    vec3 color;
     vec3 light = normalize(vec3(0.8, 1.0, 0.6));
-    vec3 ambient_color = diffuse_color.rgb * 0.1; //vec3(0.1, 0.05, 0.1);
+    vec3 ambient_color = diffuse_color.rgb * (u_planets[planet_id].lightsource ? 1.0 : 0.2); //vec3(0.1, 0.05, 0.1);
     vec3 specular_color = vec3(0.5, 0.2, 0.1);
     //vec3 diffuse_color = vec3(0.7, 0.7, 0.7);
     //vec3 diffuse_color = 0.7 * v_color.rgb;//(normal.rgb + 1.0) / 2.0;// * max(0, dot(v_normal, -light));
 
     float diffuse = max(dot(normalize(normal), normalize(light)), 0.0);
-    vec3 camera_dir = normalize(-v_position);
+    vec3 camera_dir = normalize(-position);
     vec3 half_direction = normalize(normalize(light) + camera_dir);
     float specular = pow(max(dot(half_direction, normalize(normal)), 0.0), 16.0);
 
     // Use texture colours 
     //color = vec4(v_color.rgb * max(0, dot(v_normal, -light)), v_color.a);
-    color = vec4(ambient_color + diffuse * diffuse_color + specular * specular_color, v_color.a);
+    color = vec3(ambient_color + diffuse * diffuse_color + specular * specular_color);
     // Colour using normals
     // float minr = 0.6;
     // float radius = 0.9-minr;
     //color = vec4(vec3((normalize(v_position) + 1.0) / 2.0) * (length(v_position)-minr) / radius, 1.0);
     //color = vec4(vec2(noise3d(v_normal, 10.0)), 1.0, 1.0);
-    return color;
+
+    for (int i = 0; i < u_lightsources_len; i++) {
+        uint light_id = u_lightsources[i];
+        light = normalize(position - u_planets[light_id].position);
+        diffuse = max(dot(normalize(normal), normalize(light)), 0.0);
+        half_direction = normalize(normalize(light) + camera_dir);
+        specular_color = u_planets[light_id].emission;
+        color += vec3(ambient_color + diffuse * diffuse_color + specular * specular_color);
+    }
+
+    return vec4(color, v_color.a);
 }
 
 vec3 phong_light(
@@ -270,18 +297,31 @@ vec4 ocean_shader(vec3 ocean_dark_color, vec3 ocean_light_color)
     vec3 light = -normalize(vec3(0.8, 1.0, 0.6));
     vec3 dir = -v_position;
 
-    // return mix(
-    //     getSkyColor(dir),
-    //     getSeaColor(p,n,light,dir,dir),
-    // 	pow(smoothstep(0.0,-0.02,dir.y),0.2));
-
-    return vec4(phong_light(
+    vec3 color = phong_light(
         diffuse_color, 
         diffuse_color * 0.2, 
         vec3(1.0, 1.0, 1.0), 
         normal, 
         normalize(vec3(0.8, 1.0, 0.6))
-    ), 0.93);
+    );
+
+    for (int i = 0; i < u_lightsources_len; i++) {
+        uint light_id = u_lightsources[i];
+        color += phong_light(
+            diffuse_color, 
+            diffuse_color * 0.2, 
+            u_planets[light_id].emission, 
+            normal, 
+            normalize(v_position - u_planets[light_id].position)
+        );
+    }
+
+    // return mix(
+    //     getSkyColor(dir),
+    //     getSeaColor(p,n,light,dir,dir),
+    // 	pow(smoothstep(0.0,-0.02,dir.y),0.2));
+
+    return vec4(color, 0.93);
 }
 
 //-----------------------------------------------------------------------------/
@@ -298,13 +338,16 @@ vec4 skybox_shader()
         vec3 dir = u_planets[i].position - u_player_position;
         vec3 dir_n = normalize(dir);//(normalize(p_pos) + 1.0) / 2.0;
         float rad = u_planets[i].radius;
-        float r = rad / length(dir);
+        float r = rad / length(dir);    // Percieved radius from view
         if ((length(dir) < closest_element || closest_element == -1)
-            && u_closest_planet != i
+            //&& u_closest_planet != i // Comment out to show when volume is clipped
             && sphere_sdf(pos, dir_n, r) < 0 
         ) {
+
+            float thetax = 
+
             // Can call ocean and planet shaders with new positions as parameters
-            c = vec4(u_planets[i].color_scheme[2], 1.0);
+            c = planet_shader(pos, pos, i);
             closest_element = length(dir);
         }
     }

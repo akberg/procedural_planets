@@ -3,6 +3,9 @@ use std::ffi::CString;
 #[allow(unused_imports)]
 use std::{ mem, ptr, os::raw::c_void };
 
+use std::sync::atomic::{AtomicU64, Ordering};
+pub static MEMORY_USAGE: AtomicU64 = AtomicU64::new(0);
+
 //-----------------------------------------------------------------------------/
 // Helper functions to make interacting with OpenGL a little bit 
 // prettier. You *WILL* need these! The names should be pretty self 

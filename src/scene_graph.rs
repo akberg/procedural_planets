@@ -56,6 +56,7 @@ pub enum SceneNodeType {
 
 pub struct SceneNode {
     pub node_id         : usize,
+    pub planet_id       : usize,        // Used if node belongs to a planet
     pub position        : glm::Vec3,   // Where I am in relation to my parent
     pub rotation        : glm::Vec3,   // How I should be rotated
     pub scale           : glm::Vec3,   // How I should be scaled
@@ -79,6 +80,7 @@ impl SceneNode {
     pub fn new() -> Node {
         ManuallyDrop::new(Pin::new(Box::new(SceneNode {
             node_id: NODE_COUNTER.fetch_add(1, Ordering::Relaxed) as usize,
+            planet_id       : 0,
             position        : glm::zero(),
             rotation        : glm::zero(),
             scale           : glm::vec3(1.0, 1.0, 1.0),
@@ -96,6 +98,7 @@ impl SceneNode {
     pub fn with_type(node_type: SceneNodeType) -> Node {
         ManuallyDrop::new(Pin::new(Box::new(SceneNode {
             node_id: NODE_COUNTER.fetch_add(1, Ordering::Relaxed) as usize,
+            planet_id       : 0,
             position        : glm::zero(),
             rotation        : glm::zero(),
             scale           : glm::vec3(1.0, 1.0, 1.0),
@@ -113,6 +116,7 @@ impl SceneNode {
     pub fn from_vao(vao: mesh::VAOobj) -> Node {
         ManuallyDrop::new(Pin::new(Box::new(SceneNode {
             node_id: NODE_COUNTER.fetch_add(1, Ordering::Relaxed) as usize,
+            planet_id       : 0,
             position        : glm::zero(),
             rotation        : glm::zero(),
             scale           : glm::vec3(1.0, 1.0, 1.0),
@@ -190,6 +194,7 @@ impl SceneNode {
         transformation_so_far: &glm::Mat4,
         player_position: &glm::TVec3<f32>,
     ) {
+        //eprintln!("node_id: {} VAO: {}, index_count: {}", self.node_id, self.vao.vao, self.index_count);
         // Construct the correct transformation matrix
         let mut transform = glm::identity();
         // Translate
@@ -225,18 +230,22 @@ impl SceneNode {
         view_projection_matrix: &glm::Mat4, 
         sh: &crate::shader::Shader
     ) {
+        use SceneNodeType::*;
         // Check if node is drawable, set model specific uniforms, draw
         match self.node_type {
-        SceneNodeType::PlanetSkip => return,
-        SceneNodeType::Geometry | 
-        SceneNodeType::Geometry2d | 
-        SceneNodeType::Planet | 
-        SceneNodeType::Ocean |
-        SceneNodeType::Skybox => {
+        PlanetSkip => return,
+        Geometry | 
+        Geometry2d | 
+        Planet | 
+        Ocean |
+        Skybox => {
             gl::BindVertexArray(self.vao.vao);
         
             let u_node_type = sh.get_uniform_location("u_node_type");
             gl::Uniform1ui(u_node_type, self.node_type as u32);
+            // Applies only for planets, but send anyway
+            let u_node_type = sh.get_uniform_location("u_current_planet_id");
+            gl::Uniform1ui(u_node_type, self.planet_id as u32);
             
             let u_mvp = sh.get_uniform_location("u_mvp");
             let mvp = match self.node_type {
@@ -258,7 +267,14 @@ impl SceneNode {
             }
         
             gl::DrawElements(gl::TRIANGLES, self.index_count, gl::UNSIGNED_INT, std::ptr::null());
+
+            if matches!(self.node_type, Ocean | Planet) { return } // Planet and Ocean mesh can't have children
         },
+        Empty => {
+            // if self.index_count != -1 {
+            //     eprintln!("Skipping to higher LoD");
+            // }
+        }
         _ => ()
         }
 

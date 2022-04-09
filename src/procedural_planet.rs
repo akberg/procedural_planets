@@ -6,9 +6,9 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 static PLANET_COUNTER: AtomicU64 = AtomicU64::new(0);
 /// Thresholds for level of detail
-const MAX_LOD: usize = 6;
-const THRESHOLD: [f32; MAX_LOD] = [128.0, 32.0, 16.0, 8.0, 4.0, 2.0];
-const SUBDIVS_PER_LEVEL: usize = 512; // 256: 480+380=860ms, 128: 127+98=225ms
+const MAX_LOD: usize = 8;
+//const THRESHOLD: [f32; MAX_LOD] = [128.0, 32.0, 16.0, 8.0, 4.0, 2.0];
+const SUBDIVS_PER_LEVEL: usize = 16; // 256: 480+380=860ms, 128: 127+98=225ms
 const N_LAYERS: usize = 5;  // Must match with scene.frag:22
 
 
@@ -60,12 +60,14 @@ const N_LAYERS: usize = 5;  // Must match with scene.frag:22
 pub struct Planet {
     pub node        : usize,// scene node kept separate
     pub planet_id   : usize,
+    pub parts       : usize,    // Number of meshes
     pub position    : glm::TVec3<f32>,  // Handled by scene node
     pub rotation    : glm::TVec3<f32>,  // Handled by scene node
     pub radius      : f32,              // Radius to ocean level
     pub gravity     : f32,              // Gravitational pull, for physics
 
     // Lighting
+    pub lightsource : bool,
     pub emission    : glm::TVec3<f32>,  // Emission colour and intensity
     pub reflection  : glm::TVec3<f32>,  // Reflection colour and intensity
     // Terrain
@@ -96,8 +98,11 @@ impl Planet {
             gravity     : 5.0,
             planet_id,
             emission    : glm::vec3(0.0, 0.0, 0.0),
+            lightsource : false,
             has_ocean   : true,
             ocean_lvl   : 0.0,
+            ocean_dark_color    : glm::vec3(0.01, 0.2, 0.3),
+            ocean_light_color   : glm::vec3(0.04, 0.3, 0.43),
             noise_fn    : noise::Perlin::new().set_seed(seed),
             seed,
             noise_size  : 10.0,
@@ -132,6 +137,10 @@ impl Planet {
             self.radius
         ); // u_planets[id].radius
         //-Lighting------------------------------------------------------------/
+        gl::Uniform1ui(
+            sh.get_uniform_location(&format!("u_planets[{}].lightsource", self.planet_id)),
+            self.lightsource as u32,
+        ); // u_planets[id].lightsource
         gl::Uniform3fv(
             sh.get_uniform_location(&format!("u_planets[{}].emission", self.planet_id)),
             1,
@@ -205,10 +214,14 @@ impl Planet {
         // TODO: Get absolute position and other attributes
     }
     /// Set level of detail to be drawn, generate new if needed
-    pub unsafe fn lod(&self, 
+    pub unsafe fn lod(&mut self, 
         node: &mut scene_graph::SceneNode, 
-        player_pos: glm::TVec3<f32>
+        player_position: glm::TVec3<f32>
     ) {
+        self.parts = 0;
+        self.position = glm::vec4_to_vec3(&(
+            node.current_transformation_matrix * glm::vec4(0.0, 0.0, 0.0, 1.0)
+        ));
         let rotations: [glm::TVec3<f32>; 6] = [
             glm::vec3(0.0, 0.0, 0.0),                           // Top
             glm::vec3(std::f32::consts::PI, 0.0, 0.0),          // Bottom
@@ -217,114 +230,106 @@ impl Planet {
             glm::vec3(0.0, 0.0, -std::f32::consts::FRAC_PI_2),  // Left
             glm::vec3(0.0, 0.0, std::f32::consts::FRAC_PI_2),   // Right
         ];
-        let positions: [glm::TVec3<f32>; 6] = [
-            glm::vec3(0.0, 1.0, 0.0),                           // Top
-            glm::vec3(0.0, -1.0, 0.0),                          // Bottom
-            glm::vec3(0.0, 0.0, 1.0),                           // Front
-            glm::vec3(0.0, 0.0, -1.0),                          // Back
-            glm::vec3(1.0, 0.0, 0.0),                           // Left
-            glm::vec3(-1.0, 0.0, 0.0),                          // Right
-        ];
         // Handle top of tree and call lod_terrain for terrain sides
         // let mut planet_root;
         if node.get_n_children() < 1 {
             let mut planet_root = scene_graph::SceneNode::with_type(SceneNodeType::Empty);
-            for _ in 0..6 {
+            for i in 0..6 {
                 // Generate nodes for sides if they don't exist yet
                 planet_root.add_child(&scene_graph::SceneNode::with_type(SceneNodeType::Planet));
+                planet_root.get_child(i).planet_id = self.planet_id;
             }
             node.add_child(&planet_root);
         }
-        let mut planet_root = node.get_child(0);
+        let planet_root = node.get_child(0);
 
         for (i, &child) in (&planet_root.children).iter().enumerate() {
-            self.lod_terrain(&mut *child, glm::vec3(1.0, 1.0, 1.0), rotations[i], 
-                positions[i], 0, player_pos
+            self.lod_terrain(
+                &mut *child, 
+                glm::vec3(1.0, 1.0, 1.0), 
+                rotations[i], 
+                glm::vec3(0.0, 1.0, 0.0),//positions[i], 
+                0, 
+                player_position
             );
         }
+        eprintln!("Planet {} terrain meshes: {}", self.planet_id, self.parts);
 
         if !self.has_ocean { return; }
         // Handle ocean
         if node.get_n_children() < 2 {
             let mut ocean_root = scene_graph::SceneNode::with_type(SceneNodeType::Empty);
             for i in 0..6 {
-                let ocean_mesh = mesh::Mesh::cs_plane(glm::vec3(0.5, 0.5, 0.5),
-                    rotations[i], positions[i], 32, true, None
+                // Generate sides if they don't exist yet
+                let ocean_mesh = mesh::Mesh::cs_plane(
+                    glm::vec3(1.0, 1.0, 1.0),
+                    rotations[i], 
+                    glm::vec3(0.0, 1.0, 0.0),//positions[i], 
+                    32, 
+                    true, 
+                    None, 
+                    true
                 );
                 let mut ocean_node = scene_graph::SceneNode::from_vao(ocean_mesh.mkvao());
                 ocean_node.node_type = SceneNodeType::Ocean;
+                ocean_node.planet_id = self.planet_id;
                 ocean_root.add_child(&ocean_node);
             }
             node.add_child(&ocean_root);
         }
-        let ocean_root = node.get_child(1);
-        // Generate sides if needed
     }
 
-    pub unsafe fn lod_terrain(&self, 
-        node: &mut scene_graph::SceneNode,
-        scale: glm::TVec3<f32>,
-        rotation: glm::TVec3<f32>, 
-        position: glm::TVec3<f32>, 
-
+    pub unsafe fn lod_terrain(&mut self, 
+        node: &mut scene_graph::SceneNode,  // Either gets the mesh (leaf) or becomes a parent to four subdivisions
+        scale: glm::TVec3<f32>,     // 2D scale. Modify x and z components
+        rotation: glm::TVec3<f32>,  // Won't be modified, same for all subdivs of a side
+        position: glm::TVec3<f32>,  // 2D position. Modify x and z components
         level: usize, 
-        player_pos: glm::TVec3<f32>
+        player_position: glm::TVec3<f32>
     ) {
-        let rotations: [glm::TVec3<f32>; 6] = [
-            glm::vec3(0.0, 0.0, 0.0),                           // Top
-            glm::vec3(std::f32::consts::PI, 0.0, 0.0),          // Bottom
-            glm::vec3(std::f32::consts::FRAC_PI_2, 0.0, 0.0),   // Front
-            glm::vec3(-std::f32::consts::FRAC_PI_2, 0.0, 0.0),  // Back
-            glm::vec3(0.0, 0.0, -std::f32::consts::FRAC_PI_2),  // Left
-            glm::vec3(0.0, 0.0, std::f32::consts::FRAC_PI_2),   // Right
+        let displacements: [glm::TVec3<f32>; 4] = [
+            glm::vec3(1.0, 0.0, 1.0),
+            glm::vec3(-1.0, 0.0, 1.0),
+            glm::vec3(1.0, 0.0, -1.0),
+            glm::vec3(-1.0, 0.0, -1.0),
         ];
-        let positions: [glm::TVec3<f32>; 6] = [
-            glm::vec3(0.0, 1.0, 0.0),                           // Top
-            glm::vec3(0.0, -1.0, 0.0),                          // Bottom
-            glm::vec3(0.0, 0.0, 1.0),                           // Front
-            glm::vec3(0.0, 0.0, -1.0),                          // Back
-            glm::vec3(1.0, 0.0, 0.0),                           // Left
-            glm::vec3(-1.0, 0.0, 0.0),                          // Right
-        ];
+        let planet_center = self.position;
+        let center_position = planet_center + glm::rotate_z_vec3(&glm::rotate_x_vec3(&(position * self.radius), rotation.x), rotation.z); //.component_mul(&node.scale);
+        // eprintln!("Planet center: {:?}, radius: {}, plane center: {:?}", planet_center, self.radius, center_position);
+        let normal = glm::normalize(&(center_position - planet_center));
+        let dot = glm::dot(&normal, &glm::normalize(&player_position));
+        let dist = glm::length(&(center_position - player_position));
+        // TODO: LoD needs tuning, not sure what's best
+        if dist < glm::length(&scale) * self.radius * 2.0 && dot >= 0.0 && level < MAX_LOD {
+            // Generate next level
+            //if node.node_type == SceneNodeType::Planet { eprintln!("Increasing LoD"); }
+            node.node_type = SceneNodeType::Empty;
+            if node.children.len() == 0 {
+                for i in 0..4 {
+                    node.add_child(&scene_graph::SceneNode::with_type(SceneNodeType::Planet));
+                    node.get_child(i).planet_id = self.planet_id;
+                }
+            }
+            for i in 0..4 {
+                // eprintln!("At level {}, generating child no. {}", level, i);
+                self.lod_terrain(&mut node.get_child(i), scale / 2.0, rotation, 
+                position + displacements[i] * scale.x / 2.0, level + 1, player_position);
+            }
+            return
+        }
+        self.parts += 1;
+        //if node.node_type == SceneNodeType::Empty { eprintln!("Decreasing LoD"); }
+        node.node_type = SceneNodeType::Planet;
+        // eprint!("Terrain at level {} (index_count = {})", level, node.index_count);
+        // eprintln!(" dist: {} limit: {} pos: {:?}, player_pos: {:?}", dist, 16.0 / (level+1) as f32, center_position, player_position);
+        if node.index_count != -1 { return }
+        // eprintln!(" Generating");
+        // index_count == -1: Need to generate terrain
+        let mut planet_mesh = mesh::Mesh::cs_plane(scale, rotation, position, SUBDIVS_PER_LEVEL, true, None, true);
 
-        let dist = glm::length(&(node.position - player_pos));
-
-        let mut planet_mesh = mesh::Mesh::cs_plane(scale, rotation, position, SUBDIVS_PER_LEVEL, true, None);
-        // mesh::displace_vertices(&mut planet_mesh, 
-        //     self.noise_size.into(), 
-        //     self.max_height, 
-        //     0.0,
-        //     self.seed
-        // );
         self.displace_vertices(&mut planet_mesh);
         node.update_vao(planet_mesh.mkvao());
-        node.node_type = SceneNodeType::Planet;
-
-        // TODO: actual LoD layers
-        // if dist > THRESHOLD[level] {
-        //     for (i, & child) in (&node.children).iter().enumerate() {
-        //         // TODO Use i to offset position
-        //         node.node_type = SceneNodeType::PlanetSkip;
-        //         self.lod_terrain(&mut *child,
-        //             scale, rotation, position, level+1, player_pos);
-        
-        //     }
-        // }
-        // else {
-        //     node.node_type = SceneNodeType::Planet;
-        //     if node.index_count != -1 { return; }
-        //     // Else, generate terrain
-        //     // TODO: Make it work. Next: Defer to separate thread, draw lower
-        //     // TODO  LoD while mesh is being generated
-        //     let m = mesh::Mesh::cs_plane(
-        //         scale, 
-        //         rotation, 
-        //         position, 
-        //         SUBDIVS_PER_LEVEL, 
-        //         true, None
-        //     );
-        //     // TODO: Displace vertices according to noise func
-        // }
+        //node.node_type = SceneNodeType::Planet;
     }
 
     pub fn get_height(&self, pos: &glm::TVec3<f32>) -> f32 {

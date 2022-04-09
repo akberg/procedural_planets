@@ -41,8 +41,10 @@ impl Player {
                 up
             },
             FreeFloat => {
-                
-                glm::normalize(&glm::cross(&self.right, &self.direction))
+                let up = glm::vec3(0.0, 1.0, 0.0);
+                self.right = glm::normalize(&glm::cross(&self.direction, &up));
+                up
+                //glm::normalize(&glm::cross(&self.right, &self.direction))
             },
         }
     }
