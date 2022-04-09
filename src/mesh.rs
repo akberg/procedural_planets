@@ -503,6 +503,8 @@ use noise::Fbm;
 use noise::utils::SphereMapBuilder;
 use noise::{NoiseFn, Perlin, Seedable};
 
+/// Some iterations of noise function to create a fractal noise
+/// - `offset` deprecated
 pub fn fractal_noise(generator: Perlin, point: &glm::TVec3<f32>, size: f64, height: f32, offset: f32) -> f32 {
     let mut noise_sum = 0.0;
     let mut amp = 1.0;
@@ -521,46 +523,44 @@ pub fn fractal_noise(generator: Perlin, point: &glm::TVec3<f32>, size: f64, heig
     noise_sum
 }
 
-// TODO: Better integrate as a Planet struct with set parameters, function can 
-// TODO  be reused as computed bounding box.
-
 // TODO: Interpolated height colours (noise-rs probably has it already)
-pub fn displace_vertices(mesh: &mut Mesh, size: f64, height: f32, offset: f32, seed: u32) {
-    let timer = std::time::SystemTime::now();
-    eprint!("Generating noise . . . ");
-    let mut vertices = to_array_of_vec3(mesh.vertices.clone());
-    // TODO: Planet struct will create and pass Perlin object
-    let perlin = Perlin::new().set_seed(seed);
-    // let fbm = Fbm::new();
-    // let b = SphereMapBuilder::new(&fbm).set
-    for i in 0..vertices.len() {
-        let val = 1.0 + fractal_noise(perlin, &vertices[i], size, height, offset);
-        vertices[i] *= val;
-    }
+// #[warn(deprecated)]
+// pub fn displace_vertices(mesh: &mut Mesh, size: f64, height: f32, offset: f32, seed: u32) {
+//     let timer = std::time::SystemTime::now();
+//     eprint!("Generating noise . . . ");
+//     let mut vertices = to_array_of_vec3(mesh.vertices.clone());
+//     // TODO: Planet struct will create and pass Perlin object
+//     let perlin = Perlin::new().set_seed(seed);
+//     // let fbm = Fbm::new();
+//     // let b = SphereMapBuilder::new(&fbm).set
+//     for i in 0..vertices.len() {
+//         let val = 1.0 + fractal_noise(perlin, &vertices[i], size, height, offset);
+//         vertices[i] *= val;
+//     }
     
-    // TODO: Solve the seams, could reuse the noise generator and use polar coordinates
-    let mut normals = to_array_of_vec3(mesh.normals.clone());
-    for i in (0..mesh.index_count).step_by(3) {
-        let i = i as usize;
-        // let mut v0 = glm::normalize(&vertices[mesh.indices[i] as usize]);
-        // let mut v1 = glm::rotate_x_vec3(&v0, std::f32::consts::PI / (4.0 * 4096.0));
-        // let mut v2 = glm::rotate_z_vec3(&v0, -std::f32::consts::PI / (4.0 * 4096.0));
-        // v0 *= 1.0 + fractal_noise(perlin, &v0, size, height, offset);
-        // v1 *= 1.0 + fractal_noise(perlin, &v1, size, height, offset);
-        // v2 *= 1.0 + fractal_noise(perlin, &v2, size, height, offset);
-        let v1 = vertices[mesh.indices[i + 1] as usize] - vertices[mesh.indices[i] as usize];
-        let v2 = vertices[mesh.indices[i + 2] as usize] - vertices[mesh.indices[i] as usize];
-        // v1 = v1 - v0;
-        // v2 = v2 - v0;
-        let norm = glm::normalize(&glm::cross(&v1, &v2));
-        normals[mesh.indices[i] as usize] = norm;
-        normals[mesh.indices[i + 1] as usize] = norm;
-        normals[mesh.indices[i + 2] as usize] = norm;
-    }
-    mesh.normals = from_array_of_vec3(normals);
-    mesh.vertices = from_array_of_vec3(vertices);
-    println!("took {:?}", timer.elapsed().unwrap());
-}
+//     // TODO: Solve the seams, could reuse the noise generator and use polar coordinates
+//     let mut normals = to_array_of_vec3(mesh.normals.clone());
+//     for i in (0..mesh.index_count).step_by(3) {
+//         let i = i as usize;
+//         // let mut v0 = glm::normalize(&vertices[mesh.indices[i] as usize]);
+//         // let mut v1 = glm::rotate_x_vec3(&v0, std::f32::consts::PI / (4.0 * 4096.0));
+//         // let mut v2 = glm::rotate_z_vec3(&v0, -std::f32::consts::PI / (4.0 * 4096.0));
+//         // v0 *= 1.0 + fractal_noise(perlin, &v0, size, height, offset);
+//         // v1 *= 1.0 + fractal_noise(perlin, &v1, size, height, offset);
+//         // v2 *= 1.0 + fractal_noise(perlin, &v2, size, height, offset);
+//         let v1 = vertices[mesh.indices[i + 1] as usize] - vertices[mesh.indices[i] as usize];
+//         let v2 = vertices[mesh.indices[i + 2] as usize] - vertices[mesh.indices[i] as usize];
+//         // v1 = v1 - v0;
+//         // v2 = v2 - v0;
+//         let norm = glm::normalize(&glm::cross(&v1, &v2));
+//         normals[mesh.indices[i] as usize] = norm;
+//         normals[mesh.indices[i + 1] as usize] = norm;
+//         normals[mesh.indices[i + 2] as usize] = norm;
+//     }
+//     mesh.normals = from_array_of_vec3(normals);
+//     mesh.vertices = from_array_of_vec3(vertices);
+//     println!("took {:?}", timer.elapsed().unwrap());
+// }
 
 
 // use std::ops::Index;

@@ -187,7 +187,8 @@ impl SceneNode {
     /// Update node transformations and accumulate global uniforms
     pub unsafe fn update_node_transformations(
         &mut self,
-        transformation_so_far: &glm::Mat4
+        transformation_so_far: &glm::Mat4,
+        player_position: &glm::TVec3<f32>,
     ) {
         // Construct the correct transformation matrix
         let mut transform = glm::identity();
@@ -208,7 +209,10 @@ impl SceneNode {
         self.current_transformation_matrix = transformation_so_far * transform;
         // Recurse
         for &child in &self.children {
-            (&mut *child).update_node_transformations(&self.current_transformation_matrix);
+            (&mut *child).update_node_transformations(
+                &self.current_transformation_matrix,
+                player_position
+            );
         }
     }
 

@@ -8,7 +8,7 @@ static PLANET_COUNTER: AtomicU64 = AtomicU64::new(0);
 /// Thresholds for level of detail
 const MAX_LOD: usize = 6;
 const THRESHOLD: [f32; MAX_LOD] = [128.0, 32.0, 16.0, 8.0, 4.0, 2.0];
-const SUBDIVS_PER_LEVEL: usize = 48; // 256: 480+380=860ms, 128: 127+98=225ms
+const SUBDIVS_PER_LEVEL: usize = 512; // 256: 480+380=860ms, 128: 127+98=225ms
 const N_LAYERS: usize = 5;  // Must match with scene.frag:22
 
 
@@ -63,6 +63,7 @@ pub struct Planet {
     pub position    : glm::TVec3<f32>,  // Handled by scene node
     pub rotation    : glm::TVec3<f32>,  // Handled by scene node
     pub radius      : f32,              // Radius to ocean level
+    pub gravity     : f32,              // Gravitational pull, for physics
 
     // Lighting
     pub emission    : glm::TVec3<f32>,  // Emission colour and intensity
@@ -92,6 +93,7 @@ impl Planet {
         Planet {
             node        : std::usize::MAX,
             radius      : 1.0,
+            gravity     : 5.0,
             planet_id,
             emission    : glm::vec3(0.0, 0.0, 0.0),
             has_ocean   : true,
@@ -103,20 +105,10 @@ impl Planet {
         }
     }
     pub fn with_seed(seed: u32) -> Self {
-        let planet_id = PLANET_COUNTER.fetch_add(1, Ordering::Relaxed) as usize;
-
-        Planet {
-            node        : std::usize::MAX,
-            radius      : 1.0,
-            planet_id,
-            emission    : glm::vec3(0.0, 0.0, 0.0),
-            has_ocean   : true,
-            ocean_lvl   : 0.0,
-            noise_fn    : noise::Perlin::new().set_seed(seed),
-            seed,
-            noise_size  : 10.0,
-            ..Default::default()
-        }
+        let mut planet = Self::new();
+        planet.seed = seed;
+        planet.noise_fn = noise::Perlin::new().set_seed(seed);
+        planet
     }
     
     /// Update uniforms for planet in shader
@@ -298,12 +290,13 @@ impl Planet {
         let dist = glm::length(&(node.position - player_pos));
 
         let mut planet_mesh = mesh::Mesh::cs_plane(scale, rotation, position, SUBDIVS_PER_LEVEL, true, None);
-        mesh::displace_vertices(&mut planet_mesh, 
-            self.noise_size.into(), 
-            self.max_height, 
-            0.0,
-            self.seed
-        );
+        // mesh::displace_vertices(&mut planet_mesh, 
+        //     self.noise_size.into(), 
+        //     self.max_height, 
+        //     0.0,
+        //     self.seed
+        // );
+        self.displace_vertices(&mut planet_mesh);
         node.update_vao(planet_mesh.mkvao());
         node.node_type = SceneNodeType::Planet;
 
@@ -337,10 +330,49 @@ impl Planet {
     pub fn get_height(&self, pos: &glm::TVec3<f32>) -> f32 {
         self.radius * (
             1.0 + mesh::fractal_noise(
-                self.noise_fn, &glm::normalize(pos), 
+                self.noise_fn, &glm::normalize(&(pos - &self.position)), 
                 self.noise_size.into(), self.max_height, 0.0
             )
         )
+    }
+
+    fn displace_vertices(&self, mesh: &mut mesh::Mesh) {
+        let timer = std::time::SystemTime::now();
+        eprint!("Generating noise . . . ");
+        let mut vertices = mesh::to_array_of_vec3(mesh.vertices.clone());
+        for i in 0..vertices.len() {
+            let val = 1.0 + mesh::fractal_noise(
+                self.noise_fn, 
+                &vertices[i], 
+                self.noise_size.into(), 
+                self.max_height, 
+                0.0);
+            vertices[i] *= val;
+        }
+        
+        // TODO: Solve the seams, could reuse the noise generator and use polar coordinates
+        let mut normals = mesh::to_array_of_vec3(mesh.normals.clone());
+        for i in (0..mesh.index_count).step_by(3) {
+            let i = i as usize;
+            // let mut v0 = glm::normalize(&vertices[mesh.indices[i] as usize]);
+            // let mut v1 = glm::rotate_x_vec3(&v0, std::f32::consts::PI / (4.0 * 4096.0));
+            // let mut v2 = glm::rotate_z_vec3(&v0, -std::f32::consts::PI / (4.0 * 4096.0));
+            // v0 *= 1.0 + fractal_noise(perlin, &v0, size, height, offset);
+            // v1 *= 1.0 + fractal_noise(perlin, &v1, size, height, offset);
+            // v2 *= 1.0 + fractal_noise(perlin, &v2, size, height, offset);
+            let v1 = vertices[mesh.indices[i + 1] as usize] - vertices[mesh.indices[i] as usize];
+            let v2 = vertices[mesh.indices[i + 2] as usize] - vertices[mesh.indices[i] as usize];
+            // v1 = v1 - v0;
+            // v2 = v2 - v0;
+            let norm = glm::normalize(&glm::cross(&v1, &v2));
+            normals[mesh.indices[i] as usize] = norm;
+            normals[mesh.indices[i + 1] as usize] = norm;
+            normals[mesh.indices[i + 2] as usize] = norm;
+        }
+        mesh.normals = mesh::from_array_of_vec3(normals);
+        mesh.vertices = mesh::from_array_of_vec3(vertices);
+        println!("took {:?}", timer.elapsed().unwrap());
+
     }
 }
 
