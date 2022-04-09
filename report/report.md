@@ -20,6 +20,19 @@ toc: true
 # Showcase
 
 # Log
+* 9.4:
+    * Improve collision detection. Add a 'Landed' player state with ambition of
+    implementing some very simple physics.
+    * Implemented gravitational pull when in 'Landed' state. Realizing that I still haven't done the really graphics deep-dive technical part of my project description. Still missing
+        - Lighting, both on volume and implicit geometry
+        - Texturing of implicit geometry from noise
+        - Generating planets in compute shader
+        - Conditionally increasing detail level by subdividing planes of cubesphere when getting too close
+    * Implemented initial LoD, design seems to work but needs massive tunings, as well as some bug fixes on distance measurement.
+    * Lots of memory is spent on generated terrain also when leaving a planet. Might want to free it. Didn't seem to be too important
+    * Looking into trigonometry for texturing and lighting implicit geometries. Aaargh 
+* 7.4:
+    * Work on controls, fixing directions and movement for free float and anchored. Might want to add disctinction between anchored flying and landed and implement simple gravitational pull
 * 6.4:
     * Keep radius uniform consistent with actual scale
     * Refactor game logic to keep `main.rs` small
