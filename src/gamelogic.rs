@@ -369,17 +369,17 @@ pub fn render(
         //---------------------------------------------------------------------/
         // First person view
         //---------------------------------------------------------------------/
-        // TODO: Something's weird with camera and direction
         let up = player.up();
         let cam = glm::look_at(&player.position, &(player.position+player.direction), &up);
         let perspective_view = perspective_mat * cam;
-        // let perspective_view = perspective_mat * glm::look_at(&position, &heli_body_nodes[n_helis].position, &up);
 
 
         //---------------------------------------------------------------------/
         // Draw section
         //---------------------------------------------------------------------/
         unsafe {
+            // Fixed both viewport and movement direction??
+            gl::Viewport(0, 0, wsize.width as i32, wsize.height as i32);
             //-----------------------------------------------------------------/
             // Global uniforms
             //-----------------------------------------------------------------/
