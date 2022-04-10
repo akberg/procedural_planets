@@ -90,3 +90,26 @@ float noise3d(vec3 p)
                 u.y),
             u.z);
 }
+
+// Perlin noise as implemented in the noise-rs crate
+float perlin_rs(vec3 pos, uint seed)
+{
+    // Permutation table
+    return 0.0;
+}
+
+
+float fractal_noise3d(vec3 pos, float size, float height)
+{
+    float noise_sum = 0.0;
+    float amp = 1.0;
+    float freq = 1.0;
+
+    for (int i = 0; i < 5; i++) {
+        vec3 point = pos * freq;
+        noise_sum += noise3d(vec3(point * size)) * amp * height;
+        freq *= 2.0;
+        amp *= 0.5;
+    }
+    return noise_sum;
+}
