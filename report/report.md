@@ -31,8 +31,9 @@ toc: true
     * Implemented initial LoD, design seems to work but needs massive tunings, as well as some bug fixes on distance measurement.
     * Lots of memory is spent on generated terrain also when leaving a planet. Might want to free it. Didn't seem to be too important
     * Looking into trigonometry for texturing and lighting implicit geometries. Aaargh 
+    * Oh, and I've reached limit for my number of uniforms. F***. Resources are saying I should use textures instead (https://www.khronos.org/opengl/wiki/Sampler_(GLSL)). Handling of uniform is apparently much better on Intel Iris integrated graphics than on an NVIDIA GTX970. Might be because Iris does not have a dedicated VRAM but shares the physical DRAM with the CPU (Figured that when I tried to measure VRAM usage on the laptop, didn't work)
 * 7.4:
-    * Work on controls, fixing directions and movement for free float and anchored. Might want to add disctinction between anchored flying and landed and implement simple gravitational pull
+    * Work on controls, fixing directions and movement for free float and anchored. Might want to add distinction between anchored flying and landed and implement simple gravitational pull
 * 6.4:
     * Keep radius uniform consistent with actual scale
     * Refactor game logic to keep `main.rs` small
