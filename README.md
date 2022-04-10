@@ -10,6 +10,8 @@
 ![Ocean and skybox](report/images/planet-skybox-ocean.png)
 ![Abstraction to make two planets at once](report/images/two-planets.png)
 ![Implicit shapes, still missing texturing](report/images/implicit_planets_one_mesh.png)
+![LoD, though buggy, is making progress](report/images/lod-wireframes.png)
+![LoD, though buggy, is making progress](report/images/lod-w-bugs.png)
 
 ## Controls
 
