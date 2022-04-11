@@ -65,6 +65,7 @@ pub struct SceneNode {
     pub node_type   : SceneNodeType,
     pub name        : String,
     pub current_transformation_matrix: glm::Mat4, // The fruits of my labor
+    pub distance    : f32,  // Distance to player
 
     pub vao         : mesh::VAOobj,             // What I should draw
     pub index_count : i32,             // How much of it I shall draw
@@ -88,6 +89,7 @@ impl SceneNode {
             node_type       : SceneNodeType::Empty,
             name            : String::new(),
             current_transformation_matrix: glm::identity(),
+            distance        : 0.0,
             vao             : Default::default(),
             index_count     : -1,
             texture_id      : None,
@@ -106,6 +108,7 @@ impl SceneNode {
             node_type,
             name            : String::new(),
             current_transformation_matrix: glm::identity(),
+            distance        : 0.0,
             vao             : Default::default(),
             index_count     : -1,
             texture_id      : None,
@@ -124,6 +127,7 @@ impl SceneNode {
             node_type       : SceneNodeType::Geometry,
             name            : String::new(),
             current_transformation_matrix: glm::identity(),
+            distance        : 0.0,
             vao             : vao,
             index_count     : vao.n,
             texture_id      : None,
@@ -212,6 +216,15 @@ impl SceneNode {
     
         // Update the node's transformation matrix
         self.current_transformation_matrix = transformation_so_far * transform;
+        let position = glm::vec4_to_vec3(&(
+            self.current_transformation_matrix * glm::vec4(0.0, 0.0, 0.0, 1.0)
+        ));
+        let scale = glm::vec3(
+            self.current_transformation_matrix[0],
+            self.current_transformation_matrix[4+1],
+            self.current_transformation_matrix[4*2+2],
+        );
+        self.distance = glm::length(&(player_position - position)) - scale.x;
         // Recurse
         for &child in &self.children {
             (&mut *child).update_node_transformations(
@@ -228,7 +241,8 @@ impl SceneNode {
     pub unsafe fn draw_scene(
         &self,
         view_projection_matrix: &glm::Mat4, 
-        sh: &crate::shader::Shader
+        sh: &crate::shader::Shader,
+        clipping: (f32, f32)
     ) {
         use SceneNodeType::*;
         // Check if node is drawable, set model specific uniforms, draw
@@ -239,35 +253,38 @@ impl SceneNode {
         Planet | 
         Ocean |
         Skybox => {
-            gl::BindVertexArray(self.vao.vao);
-        
-            let u_node_type = sh.get_uniform_location("u_node_type");
-            gl::Uniform1ui(u_node_type, self.node_type as u32);
-            // Applies only for planets, but send anyway
-            let u_node_type = sh.get_uniform_location("u_current_planet_id");
-            gl::Uniform1ui(u_node_type, self.planet_id as u32);
-            
-            let u_mvp = sh.get_uniform_location("u_mvp");
-            let mvp = match self.node_type {
-                SceneNodeType::Geometry2d => self.current_transformation_matrix,
-                _ => view_projection_matrix * self.current_transformation_matrix
-            };
-            gl::UniformMatrix4fv(u_mvp, 1, gl::FALSE, mvp.as_ptr());
-            
-            let u_model = sh.get_uniform_location("u_model");
-            gl::UniformMatrix4fv(u_model, 1, gl::FALSE, self.current_transformation_matrix.as_ptr());
+            if !matches!(self.node_type, Ocean | Planet) 
+            || (self.distance >= clipping.0 || self.distance < clipping.0) {
 
-            // Bind textures, or signal that none exist
-            let u_has_texture = sh.get_uniform_location("u_has_texture");
-            if let Some(texture_id) = self.texture_id {
-                gl::BindTextureUnit(0, texture_id);
-                gl::Uniform1i(u_has_texture, 1);
-            } else {
-                gl::Uniform1i(u_has_texture, 1);
+                gl::BindVertexArray(self.vao.vao);
+            
+                let u_node_type = sh.get_uniform_location("u_node_type");
+                gl::Uniform1ui(u_node_type, self.node_type as u32);
+                // Applies only for planets, but send anyway
+                let u_node_type = sh.get_uniform_location("u_current_planet_id");
+                gl::Uniform1ui(u_node_type, self.planet_id as u32);
+                
+                let u_mvp = sh.get_uniform_location("u_mvp");
+                let mvp = match self.node_type {
+                    SceneNodeType::Geometry2d => self.current_transformation_matrix,
+                    _ => view_projection_matrix * self.current_transformation_matrix
+                };
+                gl::UniformMatrix4fv(u_mvp, 1, gl::FALSE, mvp.as_ptr());
+                
+                let u_model = sh.get_uniform_location("u_model");
+                gl::UniformMatrix4fv(u_model, 1, gl::FALSE, self.current_transformation_matrix.as_ptr());
+
+                // Bind textures, or signal that none exist
+                let u_has_texture = sh.get_uniform_location("u_has_texture");
+                if let Some(texture_id) = self.texture_id {
+                    gl::BindTextureUnit(0, texture_id);
+                    gl::Uniform1i(u_has_texture, 1);
+                } else {
+                    gl::Uniform1i(u_has_texture, 1);
+                }
+            
+                gl::DrawElements(gl::TRIANGLES, self.index_count, gl::UNSIGNED_INT, std::ptr::null());
             }
-        
-            gl::DrawElements(gl::TRIANGLES, self.index_count, gl::UNSIGNED_INT, std::ptr::null());
-
             if matches!(self.node_type, Ocean | Planet) { return } // Planet and Ocean mesh can't have children
         },
         Empty => {
@@ -280,7 +297,7 @@ impl SceneNode {
 
         // Recurse
         for &child in &self.children {
-            (&*child).draw_scene(view_projection_matrix, sh);
+            (&*child).draw_scene(view_projection_matrix, sh, clipping);
         }
     }
 

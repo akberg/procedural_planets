@@ -45,8 +45,8 @@ fn main() {
     let windowed_context = cb.build_windowed(wb, &el).unwrap();
     // Uncomment these if you want to use the mouse for controls, but want it 
     // to be confined to the screen and/or invisible.
-    windowed_context.window().set_cursor_grab(true).expect("failed to grab cursor");
-    windowed_context.window().set_cursor_visible(false);
+    // windowed_context.window().set_cursor_grab(true).expect("failed to grab cursor");
+    // windowed_context.window().set_cursor_visible(false);
 
 
     // Set up a shared vector for keeping track of currently pressed keys

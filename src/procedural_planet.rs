@@ -6,7 +6,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 static PLANET_COUNTER: AtomicU64 = AtomicU64::new(0);
 /// Thresholds for level of detail
-const MAX_LOD: usize = 8;
+const MAX_LOD: usize = 12;
 //const THRESHOLD: [f32; MAX_LOD] = [128.0, 32.0, 16.0, 8.0, 4.0, 2.0];
 const SUBDIVS_PER_LEVEL: usize = 16; // 256: 480+380=860ms, 128: 127+98=225ms
 const N_LAYERS: usize = 5;  // Must match with scene.frag:22
@@ -95,7 +95,7 @@ impl Planet {
         Planet {
             node        : std::usize::MAX,
             radius      : 1.0,
-            gravity     : 5.0,
+            gravity     : 0.5,
             planet_id,
             emission    : glm::vec3(1.0, 1.0, 0.0),
             lightsource : false,
@@ -317,7 +317,7 @@ impl Planet {
         for i in 0..vertices.len() {
             let val = 1.0 + mesh::fractal_noise(
                 self.noise_fn, 
-                &vertices[i], 
+                &glm::normalize(&vertices[i]), 
                 self.noise_size.into(), 
                 self.max_height, 
                 0.0);
