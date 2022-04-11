@@ -20,6 +20,15 @@ toc: true
 # Showcase
 
 # Log
+* 11.4:
+    * Branching to remove all implicit shading without completely losing it. Keeping some of the code to possibly render some halo/atmosphere. Though clipping is still a thing as well, but passed that a planet may get constant colour.
+    * Size of planets array is still an issue, looking into Shader Storage Buffer Object (https://www.khronos.org/opengl/wiki/Shader_Storage_Buffer_Object)
+    * Another issue is clip near/far and zbuffer rounding problems, found suggestions (https://community.khronos.org/t/near-and-far-clipping-ratios/32439/3) to do one draw pass for close objects with one near/far and another for far away objects using another clipping plane. Should also consider size-distance ratio for when to clip, or just not draw.
+        - Added lots (4) of clip plane separations, allowing proper rendering at very close, thus allowing small meshes to be walked on like giant planets
+    * If so, skybox should be reworked (https://learnopengl.com/Advanced-OpenGL/Cubemaps). I have done as the initial solution here. Did this, totally worth it.
+* 10.4:
+    * This 2-ways-of-rendering-geometry thing is getting really cumbersome, maybe I should keep everything volumetric. Some 8-16 subdivs won't be very resource heavy for other planets.
+    * Seams can look more correct if all relatively close planes are equally subdivided, and if all neighbours are at most one detail level apart
 * 9.4:
     * Improve collision detection. Add a 'Landed' player state with ambition of
     implementing some very simple physics.
