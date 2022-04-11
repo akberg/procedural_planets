@@ -97,7 +97,7 @@ impl Planet {
             radius      : 1.0,
             gravity     : 5.0,
             planet_id,
-            emission    : glm::vec3(0.0, 0.0, 0.0),
+            emission    : glm::vec3(1.0, 1.0, 0.0),
             lightsource : false,
             has_ocean   : true,
             ocean_lvl   : 0.0,
@@ -127,11 +127,6 @@ impl Planet {
             1,
             self.position.as_ptr()
         ); // u_planets[id].position
-        gl::Uniform3fv(
-            sh.get_uniform_location(&format!("u_planets[{}].rotation", self.planet_id)),
-            1,
-            self.rotation.as_ptr()
-        ); // u_planets[id].rotation
         gl::Uniform1f(
             sh.get_uniform_location(&format!("u_planets[{}].radius", self.planet_id)),
             self.radius
@@ -152,15 +147,6 @@ impl Planet {
             self.emission.as_ptr()
         ); // u_planets[id].reflection
         //-Terrain-------------------------------------------------------------/
-        gl::Uniform1ui(
-            sh.get_uniform_location(&format!("u_planets[{}].has_terrain", self.planet_id)),
-            self.has_terrain as u32
-        ); // u_planets[id].has_terrain
-        gl::Uniform3fv(
-            sh.get_uniform_location(&format!("u_planets[{}].noise_height", self.planet_id)),
-            1,
-            self.ocean_light_color.as_ptr()
-        ); // u_planets[id].noise_height
         gl::Uniform3fv(
             sh.get_uniform_location(&format!("u_planets[{}].color_scheme[{}]", self.planet_id, 0)),
             1,
@@ -182,14 +168,6 @@ impl Planet {
             self.color_blending
         ); // u_planets[id].color_blending
         //-Ocean---------------------------------------------------------------/
-        gl::Uniform1ui(
-            sh.get_uniform_location(&format!("u_planets[{}].has_ocean", self.planet_id)),
-            self.has_ocean as u32
-        ); // u_planets[id].has_ocean
-        gl::Uniform1f(
-            sh.get_uniform_location(&format!("u_planets[{}].ocean_lvl", self.planet_id)),
-            self.ocean_lvl
-        ); // u_planets[id].ocean_lvl
         gl::Uniform3fv(
             sh.get_uniform_location(&format!("u_planets[{}].ocean_dark_color", self.planet_id)),
             1,
@@ -200,18 +178,6 @@ impl Planet {
             1,
             self.ocean_light_color.as_ptr()
         ); // u_planets[id].ocean_light_color
-        // Other noise parameters
-        gl::Uniform1f(
-            sh.get_uniform_location(&format!("u_planets[{}].noise_size", self.planet_id)),
-            self.noise_size
-        ); // u_planets[id].noise_size
-        gl::Uniform1ui(
-            sh.get_uniform_location(&format!("u_planets[{}].noise_seed", self.planet_id)),
-            self.seed
-        ); // u_planets[id].noise_seed
-
-        
-        // TODO: Get absolute position and other attributes
     }
     /// Set level of detail to be drawn, generate new if needed
     pub unsafe fn lod(&mut self, 
@@ -253,7 +219,7 @@ impl Planet {
                 player_position
             );
         }
-        eprintln!("Planet {} terrain meshes: {}", self.planet_id, self.parts);
+        //eprintln!("Planet {} terrain meshes: {}", self.planet_id, self.parts);
 
         if !self.has_ocean { return; }
         // Handle ocean
@@ -296,8 +262,11 @@ impl Planet {
         let planet_center = self.position;
         let center_position = planet_center + glm::rotate_z_vec3(&glm::rotate_x_vec3(&(position * self.radius), rotation.x), rotation.z); //.component_mul(&node.scale);
         // eprintln!("Planet center: {:?}, radius: {}, plane center: {:?}", planet_center, self.radius, center_position);
-        let normal = glm::normalize(&(center_position - planet_center));
-        let dot = glm::dot(&normal, &glm::normalize(&player_position));
+        let plane_normal = glm::normalize(&(center_position - planet_center));
+        let player_normal = glm::normalize(&(player_position - planet_center));
+
+        let dot = glm::dot(&plane_normal, &glm::normalize(&player_normal)); // cos of angle between player position and plane center
+        let height = self.get_height(&player_position);
         let dist = glm::length(&(center_position - player_position));
         // TODO: LoD needs tuning, not sure what's best
         if dist < glm::length(&scale) * self.radius * 2.0 && dot >= 0.0 && level < MAX_LOD {
@@ -376,7 +345,7 @@ impl Planet {
         }
         mesh.normals = mesh::from_array_of_vec3(normals);
         mesh.vertices = mesh::from_array_of_vec3(vertices);
-        println!("took {:?}", timer.elapsed().unwrap());
+        eprintln!("took {:?}", timer.elapsed().unwrap());
 
     }
 }

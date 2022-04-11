@@ -31,7 +31,7 @@ pub fn render(
     let mut conf = util::Config::load();
 
     let mut player = player::Player {
-        height: 3.0,
+        height: 2.0,
         ..Default::default() 
     };
 
@@ -151,7 +151,8 @@ pub fn render(
     
     // Skybox, inverted cube that stays centered around the player
     let skybox_mesh = mesh::Mesh::cube(
-        glm::vec3(conf.clip_far-0.1, conf.clip_far-0.1, conf.clip_far-0.1), // Defines visible distance of other objects
+        glm::vec3(1.0, 1.0, 1.0), // Defines visible distance of other objects
+        //glm::vec3(conf.clip_far-0.1, conf.clip_far-0.1, conf.clip_far-0.1), // Defines visible distance of other objects
         glm::vec2(1.0, 1.0), true, true, 
         glm::vec3(1.0, 1.0, 1.0),
         glm::vec4(0.05, 0.01, 0.06, 0.2),
@@ -170,6 +171,7 @@ pub fn render(
     planet0.noise_size = 25.0;
     planet0.ocean_dark_color = glm::vec3(0.01, 0.2, 0.3);
     planet0.ocean_light_color = glm::vec3(0.04, 0.3, 0.43);
+    planet0.emission = glm::vec3(0.03, 0.32, 0.37);
     planet0.color_scheme = [
         glm::vec3(0.4, 0.4, 0.3),
         glm::vec3(0.7, 0.55, 0.0),
@@ -192,6 +194,7 @@ pub fn render(
     //planet1.radius = 5.0; // must be 1/2 of scale
     planet1.max_height = 0.3;
     planet1.noise_size = 4.0;
+    planet1.emission = glm::vec3(0.02, 0.26, 0.36);
     planet1.ocean_dark_color = glm::vec3(0.01, 0.2, 0.3);
     planet1.ocean_light_color = glm::vec3(0.04, 0.3, 0.43);
     planet1.color_scheme = [
@@ -217,6 +220,7 @@ pub fn render(
     planet2.max_height = 0.05;
     planet2.noise_size = 10.0;
     planet2.has_ocean = false;
+    planet2.emission = glm::vec3(0.6118, 0.1255, 0.1255);
     planet2.color_scheme = [
         glm::vec3(0.6118, 0.1255, 0.1255),
         glm::vec3(0.7, 0.55, 0.0),
@@ -249,7 +253,7 @@ pub fn render(
     planet3.color_thresholds = [
         -0.0005, 0.001, 0.005, 0.011
     ];
-    planet3.emission = glm::vec3(1.0, 1.0, 1.0);
+    planet3.emission = glm::vec3(1.0, 0.3, 0.0);
     planet3.lightsource = true;
     let mut planet3_node = scene_graph::SceneNode::with_type(SceneNodeType::Empty);
     planet3_node.planet_id = planet3.planet_id;
@@ -281,7 +285,7 @@ pub fn render(
     // Make Scene graph
     //-------------------------------------------------------------------------/
     let mut scene_root = SceneNode::new();
-    scene_root.add_child(&skybox_node);
+    // scene_root.add_child(&skybox_node);
     for planet in &planet_nodes {
         scene_root.add_child(planet);
     }
@@ -443,6 +447,16 @@ pub fn render(
         let perspective_mat: glm::Mat4 = glm::perspective(
             wsize.width as f32 / wsize.height as f32,
             conf.fov,       // field of view
+            // match player.state {
+            //     player::PlayerState::FreeFloat => 1.0,
+            //     player::PlayerState::Anchored(_) => 0.5,
+            //     player::PlayerState::Landed(_) => 0.001,
+            // },
+            // match player.state {
+            //     player::PlayerState::FreeFloat => 50000.0,
+            //     player::PlayerState::Anchored(_) => 10000.0,
+            //     player::PlayerState::Landed(_) => 1000.0,
+            // },
             conf.clip_near, // near
             conf.clip_far   // far
         );
@@ -500,22 +514,29 @@ pub fn render(
                         closest_planet_node_id = planet.node;
                     }
                 }
-                for node in &mut planet_nodes {
-                    if node.node_id == closest_planet_node_id {
-                        node.node_type = SceneNodeType::Empty;
-                    }
-                    else {
-                        node.node_type = SceneNodeType::PlanetSkip;
-                    }
-                }
-                planets[closest_planet_id].lod(&mut planet_nodes[closest_planet_id], player.position);
+                // for node in &mut planet_nodes {
+                //     if node.node_id == closest_planet_node_id {
+                //         node.node_type = SceneNodeType::Empty;
+                //     }
+                //     else {
+                //         node.node_type = SceneNodeType::PlanetSkip;
+                //     }
+                // }
+                (0..planets.len()).for_each(|i| {
+                    planets[i].lod(&mut planet_nodes[i], player.position);
+                    let depth_test = planets[i].radius / glm::length(&(planets[i].position - player.position));
+                    planet_nodes[i].node_type = if depth_test.atan() < conf.render_limit {
+                        SceneNodeType::PlanetSkip
+                    } else {
+                        SceneNodeType::Empty
+                    };
+                });
             }
             gl::Uniform1ui(
                 sh.get_uniform_location("u_planets_len"),
                 planets.len() as u32
             );
             lightsources.iter().enumerate().for_each(|(i, &id)| {
-                eprintln!("u_lightsources[{}]={}", i, id);
                 gl::Uniform1ui(
                     sh.get_uniform_location(&format!("u_lightsources[{}]", i)),
                     id as u32,
@@ -523,7 +544,7 @@ pub fn render(
             });
             gl::Uniform1ui(
                 sh.get_uniform_location("u_lightsources_len"),
-                lightsources.len() as u32
+                1//lightsources.len() as u32
             );
             gl::Uniform1ui(
                 sh.get_uniform_location("u_closest_planet"),
@@ -539,11 +560,22 @@ pub fn render(
 
 
             //-----------------------------------------------------------------/
+            // Draw skybox
+            //-----------------------------------------------------------------/
+            gl::DepthFunc(gl::EQUAL);
+            skybox_node.update_node_transformations(&glm::identity(), &player.position);
+            skybox_node.draw_scene(&perspective_view, &sh);
+            gl::DepthFunc(gl::LESS);
+            
+
+            //-----------------------------------------------------------------/
             // Draw GUI if enabled
             //-----------------------------------------------------------------/
             if conf.draw_gui {
+                gl::Disable(gl::DEPTH_TEST);
                 gui_root.update_node_transformations(&glm::identity(), &player.position);
                 gui_root.draw_scene(&perspective_view, &sh);
+                gl::Enable(gl::DEPTH_TEST);
             }
         }
 
@@ -670,14 +702,14 @@ fn keyboard_input(
             VirtualKeyCode::Up => {
                 let v = key_debounce.entry(VirtualKeyCode::Up).or_insert(0);
                 if *v == 0 {
-                    conf.movement_speed = conf.movement_speed * 1.1;
+                    conf.movement_speed = conf.movement_speed * 1.6;
                     *v = 10;
                 }
             },
             VirtualKeyCode::Down => {
                 let v = key_debounce.entry(VirtualKeyCode::Down).or_insert(0);
                 if *v == 0 {
-                    conf.movement_speed = conf.movement_speed / 1.1;
+                    conf.movement_speed = conf.movement_speed / 1.6;
                     *v = 10;
                 }
             },

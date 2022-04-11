@@ -76,20 +76,21 @@ pub extern "system" fn debug_callback(
 
 #[derive(Default, Debug)]
 pub struct Config {
-    pub fov: f32,
-    pub clip_near: f32,
-    pub clip_far: f32,
-    pub movement_speed: f32,
-    pub mouse_speed: f32,
-    pub tilt_speed: f32,
-    pub tilt: f32,
-    pub init_position: [f32; 3],
-    pub bg_color: [f32; 4],
-    pub init_h_angle: f32,
-    pub init_v_angle: f32,
-    pub camera_position: CameraPosition,
-    pub polymode: usize,
-    pub draw_gui: bool,
+    pub fov             : f32,
+    pub clip_near       : f32,
+    pub clip_far        : f32,
+    pub movement_speed  : f32,
+    pub mouse_speed     : f32,
+    pub tilt_speed      : f32,
+    pub tilt            : f32,
+    pub init_position   : [f32; 3],
+    pub bg_color        : [f32; 4],
+    pub init_h_angle    : f32,
+    pub init_v_angle    : f32,
+    pub camera_position : CameraPosition,
+    pub polymode        : usize,
+    pub draw_gui        : bool,
+    pub render_limit    : f32,
     //init_direction: [f32; 3],
 }
 
@@ -131,6 +132,7 @@ impl Config {
                     "bg_color" => conf.bg_color = Self::parse_array::<f32, 4>(val),
                     "polymode" => conf.polymode = val.trim().parse::<usize>().unwrap(),
                     "draw_gui" => conf.draw_gui = val.trim() != "false",
+                    "render_limit" => conf.render_limit = val.trim().parse::<f32>().unwrap(),
                     //"init_direction" => conf.init_direction = Self::parse_array::<f32, 3>(val),
                     &_ => (),
                 }
