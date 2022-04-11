@@ -340,10 +340,10 @@ vec4 skybox_shader()
 
         if ((length(dir) < closest_element || closest_element == -1) // Oclusion culling
             //&& u_closest_planet != i // Comment out to show when volume is clipped
-            && sdf < 0 
+            && sdf_halo < 0 
         ) {
             c.rgb = u_planets[i].emission;
-            c.a = -sdf / r;//min(1.0, -sdf * r); //0.5; //sdf < 0 ? 1.0 : -sdf_halo / length(dir);
+            c.a = min(1.0, -sdf_halo / r * 2.0 - sdf_halo/10.0);//min(1.0, -sdf * r); //0.5; //sdf < 0 ? 1.0 : -sdf_halo / length(dir);
             closest_element = length(dir);
         }
     }
@@ -358,7 +358,7 @@ vec4 skybox_shader()
     vec3 ipos = floor(st);
     vec3 fpos = fract(st);
     float n = noise3d(st);
-    float sn = abs(n - 0.5);
+    float sn = abs(n - 0.5) * 0.9;
     float radgrad = max(0.0, 1.0 - length(abs(fpos - 0.5)) / sn);
     radgrad *= radgrad;
     
