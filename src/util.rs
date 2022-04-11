@@ -91,6 +91,8 @@ pub struct Config {
     pub polymode        : usize,
     pub draw_gui        : bool,
     pub render_limit    : f32,
+    pub player_height   : f32,
+    pub jump_speed      : f32,
     //init_direction: [f32; 3],
 }
 
@@ -133,6 +135,8 @@ impl Config {
                     "polymode" => conf.polymode = val.trim().parse::<usize>().unwrap(),
                     "draw_gui" => conf.draw_gui = val.trim() != "false",
                     "render_limit" => conf.render_limit = val.trim().parse::<f32>().unwrap(),
+                    "player_height" => conf.player_height = val.trim().parse::<f32>().unwrap(),
+                    "jump_speed" => conf.jump_speed = val.trim().parse::<f32>().unwrap(),
                     //"init_direction" => conf.init_direction = Self::parse_array::<f32, 3>(val),
                     &_ => (),
                 }
