@@ -162,7 +162,7 @@ pub fn render(
     
     
     //-------------------------------------------------------------------------/
-    // Generate planets
+    // Scene setup
     //-------------------------------------------------------------------------/
     // Small earth-like planet
     let mut planet0 = planet::Planet::with_seed(4393);
@@ -184,8 +184,14 @@ pub fn render(
     ];
     let mut planet0_node = scene_graph::SceneNode::with_type(SceneNodeType::Empty);
     planet0_node.planet_id = planet0.planet_id;
-    planet0_node.scale *= 25.0;
-    planet0_node.position = glm::vec3(650.0, 2.0, 200.0);
+    planet0_node.scale *= 20.0;
+    planet0.trajectory = 790.0;
+    planet0.init_angle = glm::vec3(6.24f32, 2.0, 6.24f32);
+    planet0_node.position = glm::vec3(
+        planet0.init_angle.x.sin() * planet0.trajectory, 
+        planet0.init_angle.y, 
+        planet0.init_angle.z.cos() * planet0.trajectory
+    );
     planet0.node = planet0_node.node_id;
 
 
@@ -210,7 +216,8 @@ pub fn render(
     let mut planet1_node = scene_graph::SceneNode::with_type(SceneNodeType::Empty);
     planet1_node.planet_id = planet1.planet_id;
     planet1_node.scale *= 16.0;
-    planet1_node.position = glm::vec3(-75.0, 19.0, -300.0);
+    let traj = 530.0;
+    planet1_node.position = glm::vec3(0.13f32.sin() * traj, 0.3, 0.13f32.cos() * traj);
     planet1.node = planet1_node.node_id;
 
 
@@ -233,10 +240,10 @@ pub fn render(
     ];
     let mut planet2_node = scene_graph::SceneNode::with_type(SceneNodeType::Empty);
     planet2_node.planet_id = planet2.planet_id;
-    planet2_node.scale *= 17.0;
-    planet2_node.position = glm::vec3(-200.0, 22.0, 55.0);
+    planet2_node.scale *= 15.0;
+    let traj = 320.0;
+    planet2_node.position = glm::vec3(0.0f32.sin() * traj, 2.0, 0.0f32.cos() * traj);
     planet2.node = planet2_node.node_id;
-
 
     // sun
     let mut planet3 = planet::Planet::with_seed(4393);
@@ -257,8 +264,8 @@ pub fn render(
     planet3.lightsource = true;
     let mut planet3_node = scene_graph::SceneNode::with_type(SceneNodeType::Empty);
     planet3_node.planet_id = planet3.planet_id;
-    planet3_node.scale *= 25.0;
-    planet3_node.position = glm::vec3(50.0, 0.0, -150.0);
+    planet3_node.scale *= 33.0;
+    planet3_node.position = glm::vec3(00.0, 0.0, -0.0);
     planet3.node = planet3_node.node_id;
 
     // Moon of mars-like planet
@@ -280,9 +287,33 @@ pub fn render(
     ];
     let mut planet4_node = scene_graph::SceneNode::with_type(SceneNodeType::Empty);
     planet4_node.planet_id = planet4.planet_id;
-    planet4_node.scale *= 7.0;
-    planet4_node.position = glm::vec3(-240.0, 22.0, 55.0);
+    planet4_node.scale *= 4.0;
+    planet4_node.position = planet2_node.position + glm::vec3(-40.0, 0.0, 5.0);
     planet4.node = planet4_node.node_id;
+
+    // Small mars-like planet
+    let mut planet5 = planet::Planet::with_seed(71772);
+    //planet2.radius = 5.0;
+    planet5.max_height = 0.02;
+    planet5.noise_size = 8.2;
+    planet5.has_ocean = false;
+    planet5.emission = glm::vec3(0.0941, 0.1922, 0.5216);
+    planet5.color_scheme = [
+        glm::vec3(0.1686, 0.3412, 0.9216),
+        glm::vec3(0.0941, 0.1922, 0.5216),
+        glm::vec3(0.2078, 0.3412, 0.7804),
+        glm::vec3(0.0941, 0.1922, 0.5216),
+        glm::vec3(0.1686, 0.3412, 0.9216),
+    ];
+    planet5.color_thresholds = [
+        -0.01, 0.001, 0.010, 0.016
+    ];
+    let mut planet5_node = scene_graph::SceneNode::with_type(SceneNodeType::Empty);
+    planet5_node.planet_id = planet5.planet_id;
+    planet5_node.scale *= 12.0;
+    let traj = 1290.0;
+    planet5_node.position = glm::vec3(-6.22f32.sin() * traj, 1.1, 06.22f32.cos() * traj);
+    planet5.node = planet5_node.node_id;
 
 
     let mut lightsources = vec![
@@ -295,6 +326,7 @@ pub fn render(
         planet2, 
         planet3,
         planet4,
+        planet5,
     ];
     let mut planet_nodes = vec![
         planet0_node, 
@@ -302,6 +334,7 @@ pub fn render(
         planet2_node, 
         planet3_node,
         planet4_node,
+        planet5_node,
     ];
     let mut closest_planet_id  = 0;
 
@@ -464,6 +497,8 @@ pub fn render(
             49.0 / 29.0, 1.0 * s.len() as f32 / 28.0
         );
         text_height_node.update_buffers(&text_height_mesh);
+
+
 
         //---------------------------------------------------------------------/
         // Update perspective
