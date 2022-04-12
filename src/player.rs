@@ -2,8 +2,8 @@ use nalgebra_glm as glm;
 // Player controller
 // - Mark closest planet and apply UP with an on/off switch
 
-pub const MAX_H_SPEED: f32 = 10.0;  // Maximum horizontal speed from gravity
-pub const H_ERROR: f32 = 0.1;       // Margin of error for height computation
+pub const MAX_H_SPEED: f32 = 1.0;  // Maximum horizontal speed from gravity
+pub const H_ERROR: f32 = 0.0001;       // Margin of error for height computation
 
 #[derive(Debug)]
 pub enum PlayerState { 

@@ -31,7 +31,7 @@ pub fn render(
     let mut conf = util::Config::load();
 
     let mut player = player::Player {
-        height: 3.0,
+        height: conf.player_height,
         ..Default::default() 
     };
 
@@ -151,7 +151,8 @@ pub fn render(
     
     // Skybox, inverted cube that stays centered around the player
     let skybox_mesh = mesh::Mesh::cube(
-        glm::vec3(conf.clip_far-0.1, conf.clip_far-0.1, conf.clip_far-0.1), // Defines visible distance of other objects
+        glm::vec3(1.0, 1.0, 1.0), // Defines visible distance of other objects
+        //glm::vec3(conf.clip_far-0.1, conf.clip_far-0.1, conf.clip_far-0.1), // Defines visible distance of other objects
         glm::vec2(1.0, 1.0), true, true, 
         glm::vec3(1.0, 1.0, 1.0),
         glm::vec4(0.05, 0.01, 0.06, 0.2),
@@ -161,15 +162,16 @@ pub fn render(
     
     
     //-------------------------------------------------------------------------/
-    // Generate planets
+    // Scene setup
     //-------------------------------------------------------------------------/
     // Small earth-like planet
     let mut planet0 = planet::Planet::with_seed(4393);
     //planet0.radius = 5.0;
-    planet0.max_height = 0.05;
+    planet0.max_height = 0.03;
     planet0.noise_size = 25.0;
     planet0.ocean_dark_color = glm::vec3(0.01, 0.2, 0.3);
     planet0.ocean_light_color = glm::vec3(0.04, 0.3, 0.43);
+    planet0.emission = glm::vec3(0.03, 0.32, 0.37);
     planet0.color_scheme = [
         glm::vec3(0.4, 0.4, 0.3),
         glm::vec3(0.7, 0.55, 0.0),
@@ -178,20 +180,27 @@ pub fn render(
         glm::vec3(0.91, 1.0, 1.0),
     ];
     planet0.color_thresholds = [
-        -0.0005, 0.001, 0.014, 0.024
+        -0.0005, 0.0008, 0.019, 0.022
     ];
     let mut planet0_node = scene_graph::SceneNode::with_type(SceneNodeType::Empty);
     planet0_node.planet_id = planet0.planet_id;
-    planet0_node.scale *= 250.0;
-    planet0_node.position = glm::vec3(6500.0, 20.0, 2000.0);
+    planet0_node.scale *= 20.0;
+    planet0.trajectory = 790.0;
+    planet0.init_angle = glm::vec3(6.24f32, 2.0, 6.24f32);
+    planet0_node.position = glm::vec3(
+        planet0.init_angle.x.sin() * planet0.trajectory, 
+        planet0.init_angle.y, 
+        planet0.init_angle.z.cos() * planet0.trajectory
+    );
     planet0.node = planet0_node.node_id;
 
 
     // Other planet
     let mut planet1 = planet::Planet::with_seed(4393);
     //planet1.radius = 5.0; // must be 1/2 of scale
-    planet1.max_height = 0.3;
+    planet1.max_height = 0.08;
     planet1.noise_size = 4.0;
+    planet1.emission = glm::vec3(0.02, 0.26, 0.36);
     planet1.ocean_dark_color = glm::vec3(0.01, 0.2, 0.3);
     planet1.ocean_light_color = glm::vec3(0.04, 0.3, 0.43);
     planet1.color_scheme = [
@@ -202,21 +211,23 @@ pub fn render(
         glm::vec3(0.91, 1.0, 1.0),
     ];
     planet1.color_thresholds = [
-        -0.0005, 0.001, 0.014, 0.024
+        -0.0005, 0.001, 0.014, 0.028
     ];
     let mut planet1_node = scene_graph::SceneNode::with_type(SceneNodeType::Empty);
     planet1_node.planet_id = planet1.planet_id;
-    planet1_node.scale *= 160.0;
-    planet1_node.position = glm::vec3(-750.0, 190.0, -3000.0);
+    planet1_node.scale *= 16.0;
+    let traj = 530.0;
+    planet1_node.position = glm::vec3(0.13f32.sin() * traj, 0.3, 0.13f32.cos() * traj);
     planet1.node = planet1_node.node_id;
 
 
     // Small mars-like planet
     let mut planet2 = planet::Planet::with_seed(4393);
     //planet2.radius = 5.0;
-    planet2.max_height = 0.05;
+    planet2.max_height = 0.03;
     planet2.noise_size = 10.0;
     planet2.has_ocean = false;
+    planet2.emission = glm::vec3(0.6118, 0.1255, 0.1255);
     planet2.color_scheme = [
         glm::vec3(0.6118, 0.1255, 0.1255),
         glm::vec3(0.7, 0.55, 0.0),
@@ -225,37 +236,84 @@ pub fn render(
         glm::vec3(0.91, 1.0, 1.0),
     ];
     planet2.color_thresholds = [
-        -0.0005, 0.001, 0.014, 0.024
+        -0.0005, 0.001, 0.014, 0.026
     ];
     let mut planet2_node = scene_graph::SceneNode::with_type(SceneNodeType::Empty);
     planet2_node.planet_id = planet2.planet_id;
-    planet2_node.scale *= 170.0;
-    planet2_node.position = glm::vec3(-2000.0, 220.0, 550.0);
+    planet2_node.scale *= 15.0;
+    let traj = 320.0;
+    planet2_node.position = glm::vec3(0.0f32.sin() * traj, 2.0, 0.0f32.cos() * traj);
     planet2.node = planet2_node.node_id;
 
-
-    // planet
+    // sun
     let mut planet3 = planet::Planet::with_seed(4393);
-    planet3.max_height = 0.045;   // relative to scale
-    planet3.noise_size = 2.0;
+    planet3.max_height = 0.003;   // relative to scale
+    planet3.noise_size = 500.0;
     planet3.has_ocean = false;
     planet3.color_scheme = [
-        glm::vec3(0.9608, 0.3529, 0.0),
         glm::vec3(0.9608, 0.2235, 0.0),
         glm::vec3(0.9608, 0.3529, 0.0),
         glm::vec3(0.9608, 0.2235, 0.0),
         glm::vec3(0.9608, 0.3529, 0.0),
+        glm::vec3(0.9608, 0.2235, 0.0),
     ];
     planet3.color_thresholds = [
-        -0.0005, 0.001, 0.005, 0.011
+        -0.0007, -0.0001, 0.0004, 0.0008
     ];
-    planet3.emission = glm::vec3(1.0, 1.0, 1.0);
+    planet3.emission = glm::vec3(1.0, 0.3, 0.0);
     planet3.lightsource = true;
     let mut planet3_node = scene_graph::SceneNode::with_type(SceneNodeType::Empty);
     planet3_node.planet_id = planet3.planet_id;
-    planet3_node.scale *= 250.0;
-    planet3_node.position = glm::vec3(500.0, 0.0, -1500.0);
+    planet3_node.scale *= 33.0;
+    planet3_node.position = glm::vec3(00.0, 0.0, -0.0);
     planet3.node = planet3_node.node_id;
+
+    // Moon of mars-like planet
+    let mut planet4 = planet::Planet::with_seed(432973);
+    //planet2.radius = 5.0;
+    planet4.max_height = 0.003;
+    planet4.noise_size = 6.0;
+    planet4.has_ocean = false;
+    planet4.emission = glm::vec3(0.118, 0.1255, 0.1255);
+    planet4.color_scheme = [
+        glm::vec3(0.118, 0.1255, 0.1255),
+        glm::vec3(0.118, 0.255, 0.255),
+        glm::vec3(0.018, 0.20, 0.20),
+        glm::vec3(0.08, 0.1055, 0.1055),
+        glm::vec3(0.118, 0.1255, 0.1255),
+    ];
+    planet4.color_thresholds = [
+        -0.0005, 0.001, 0.014, 0.026
+    ];
+    let mut planet4_node = scene_graph::SceneNode::with_type(SceneNodeType::Empty);
+    planet4_node.planet_id = planet4.planet_id;
+    planet4_node.scale *= 4.0;
+    planet4_node.position = planet2_node.position + glm::vec3(-40.0, 0.0, 5.0);
+    planet4.node = planet4_node.node_id;
+
+    // Small mars-like planet
+    let mut planet5 = planet::Planet::with_seed(71772);
+    //planet2.radius = 5.0;
+    planet5.max_height = 0.02;
+    planet5.noise_size = 8.2;
+    planet5.has_ocean = false;
+    planet5.emission = glm::vec3(0.0941, 0.1922, 0.5216);
+    planet5.color_scheme = [
+        glm::vec3(0.1686, 0.3412, 0.9216),
+        glm::vec3(0.0941, 0.1922, 0.5216),
+        glm::vec3(0.2078, 0.3412, 0.7804),
+        glm::vec3(0.0941, 0.1922, 0.5216),
+        glm::vec3(0.1686, 0.3412, 0.9216),
+    ];
+    planet5.color_thresholds = [
+        -0.01, 0.001, 0.010, 0.016
+    ];
+    let mut planet5_node = scene_graph::SceneNode::with_type(SceneNodeType::Empty);
+    planet5_node.planet_id = planet5.planet_id;
+    planet5_node.scale *= 12.0;
+    let traj = 1290.0;
+    planet5_node.position = glm::vec3(-6.22f32.sin() * traj, 1.1, 06.22f32.cos() * traj);
+    planet5.node = planet5_node.node_id;
 
 
     let mut lightsources = vec![
@@ -266,13 +324,17 @@ pub fn render(
         planet0, 
         planet1, 
         planet2, 
-        planet3
+        planet3,
+        planet4,
+        planet5,
     ];
     let mut planet_nodes = vec![
         planet0_node, 
         planet1_node, 
         planet2_node, 
-        planet3_node
+        planet3_node,
+        planet4_node,
+        planet5_node,
     ];
     let mut closest_planet_id  = 0;
 
@@ -281,7 +343,7 @@ pub fn render(
     // Make Scene graph
     //-------------------------------------------------------------------------/
     let mut scene_root = SceneNode::new();
-    scene_root.add_child(&skybox_node);
+    // scene_root.add_child(&skybox_node);
     for planet in &planet_nodes {
         scene_root.add_child(planet);
     }
@@ -436,12 +498,15 @@ pub fn render(
         );
         text_height_node.update_buffers(&text_height_mesh);
 
+
+
         //---------------------------------------------------------------------/
         // Update perspective
         //---------------------------------------------------------------------/
         let wsize = context.window().inner_size();
+        let aspect = wsize.width as f32 / wsize.height as f32;
         let perspective_mat: glm::Mat4 = glm::perspective(
-            wsize.width as f32 / wsize.height as f32,
+            aspect,
             conf.fov,       // field of view
             conf.clip_near, // near
             conf.clip_far   // far
@@ -466,6 +531,20 @@ pub fn render(
             //-----------------------------------------------------------------/
             let u_time = sh.get_uniform_location("u_time");
             gl::Uniform1f(u_time, elapsed);
+            let u_view = sh.get_uniform_location("u_view");
+            let u_perspective = sh.get_uniform_location("u_perspective");
+            gl::UniformMatrix4fv(
+                u_view,
+                1,
+                gl::FALSE,
+                cam.as_ptr(),
+            );
+            gl::UniformMatrix4fv(
+                u_perspective,
+                1,
+                gl::FALSE,
+                perspective_mat.as_ptr(),
+            );
             
             
             //-----------------------------------------------------------------/
@@ -483,39 +562,45 @@ pub fn render(
             // Planet transforms and update uniforms
             // Compute closest planet
             //-----------------------------------------------------------------/
+            let timer = std::time::SystemTime::now();
             scene_root.update_node_transformations(&glm::identity(), &player.position);
+            let scene_time = timer.elapsed().unwrap().as_millis();
             
-            if frame_counter % 50 == 0 {
-                let mut closest_planet = std::f32::MAX;
-                let mut closest_planet_node_id = 0;
-                for (node, mut planet) in planet_nodes.iter().zip(&mut planets) {
-                    planet.position = node.position;
-                    planet.rotation = node.rotation;
-                    planet.radius = node.scale.x / 2.0;
-                    planet.update_uniforms(&sh);
-                    let dist = glm::length(&(planet.position - player.position)) - planet.radius;
-                    if dist < closest_planet {
-                        closest_planet = dist;
-                        closest_planet_id = planet.planet_id;
-                        closest_planet_node_id = planet.node;
-                    }
-                }
-                for node in &mut planet_nodes {
-                    if node.node_id == closest_planet_node_id {
-                        node.node_type = SceneNodeType::Empty;
-                    }
-                    else {
-                        node.node_type = SceneNodeType::PlanetSkip;
-                    }
-                }
-                planets[closest_planet_id].lod(&mut planet_nodes[closest_planet_id], player.position);
+            let mut planets_sorted = vec![];
+            for (node, mut planet) in planet_nodes.iter().zip(&mut planets) {
+                planet.position = node.position;
+                planet.rotation = node.rotation;
+                planet.radius = node.scale.x / 2.0;
+                planet.update_uniforms(&sh);
+                let dist = glm::length(&(planet.position - player.position)) - planet.radius;
+                planets_sorted.push((dist, planet.planet_id));
             }
+            planets_sorted.sort_by(|&a,&b| a.0.partial_cmp(&b.0).unwrap());
+            planets_sorted.iter().enumerate().for_each(|(i, &(_dist, id))| {
+                gl::Uniform1ui(
+                    sh.get_uniform_location(&format!("u_planet_ids_sorted[{}]", i)),
+                    id as u32,
+                )
+            });
+            closest_planet_id = planets_sorted[0].1;
+            // Stop rendering passed render_limit
+            let timer = std::time::SystemTime::now();
+            (0..planets.len()).for_each(|i| {
+                planets[i].lod(&mut (*planet_nodes[i]), player.position);
+                let depth_test = planets[i].radius / glm::length(&(planets[i].position - player.position));
+                planet_nodes[i].node_type = if depth_test.atan() < conf.render_limit {
+                    SceneNodeType::PlanetSkip
+                } else {
+                    SceneNodeType::Empty
+                };
+            });
+            let lod_time = timer.elapsed().unwrap().as_millis();
+
             gl::Uniform1ui(
                 sh.get_uniform_location("u_planets_len"),
                 planets.len() as u32
             );
             lightsources.iter().enumerate().for_each(|(i, &id)| {
-                eprintln!("u_lightsources[{}]={}", i, id);
                 gl::Uniform1ui(
                     sh.get_uniform_location(&format!("u_lightsources[{}]", i)),
                     id as u32,
@@ -523,11 +608,7 @@ pub fn render(
             });
             gl::Uniform1ui(
                 sh.get_uniform_location("u_lightsources_len"),
-                lightsources.len() as u32
-            );
-            gl::Uniform1ui(
-                sh.get_uniform_location("u_closest_planet"),
-                closest_planet_id as u32
+                1//lightsources.len() as u32
             );
             gl::Uniform3fv(
                 sh.get_uniform_location("u_player_position"),
@@ -535,15 +616,96 @@ pub fn render(
                 player.position.as_ptr()
             );
 
-            scene_root.draw_scene(&perspective_view, &sh);
+            
+            let start_draw = now.elapsed().as_secs_f32();
+            // Log fps
+            let s = format!("FPS: {:.3} ({}ms scene graph, {}ms LoD", 1.0 / delta_time,
+                scene_time, lod_time);
+            text_closest_mesh = mesh::Mesh::text_buffer(
+                &s,
+                49.0 / 29.0, 1.0 * s.len() as f32 / 28.0
+            );
+            text_closest_node.update_buffers(&text_closest_mesh);
+            //-----------------------------------------------------------------/
+            // Draw skybox
+            //-----------------------------------------------------------------/
+            gl::DepthFunc(gl::EQUAL);
+            skybox_node.update_node_transformations(&glm::identity(), &player.position);
+            skybox_node.draw_scene(&perspective_view, &sh, (0.1, 10.0));
+            gl::DepthFunc(gl::LESS);
 
+            // Draw objects very far away 
+            gl::Clear(gl::DEPTH_BUFFER_BIT);
+            let clipping = (125.0, 162500.0);
+            let perspective_mat: glm::Mat4 = glm::perspective(
+                aspect,
+                conf.fov,       // field of view
+                clipping.0, // near
+                clipping.1   // far
+            );
+            gl::UniformMatrix4fv(
+                u_perspective,
+                1,
+                gl::FALSE,
+                perspective_mat.as_ptr(),
+            );
+            let perspective_view = perspective_mat * cam;
+            scene_root.draw_scene(&perspective_view, &sh, clipping);
+            // Draw objects pretty far away 
+            gl::Clear(gl::DEPTH_BUFFER_BIT);
+            let clipping = (2.5, 1250.0);
+            let perspective_mat: glm::Mat4 = glm::perspective(
+                aspect,
+                conf.fov,       // field of view
+                clipping.0, // near
+                clipping.1   // far
+            );
+            gl::UniformMatrix4fv(
+                u_perspective,
+                1,
+                gl::FALSE,
+                perspective_mat.as_ptr(),
+            );
+            let perspective_view = perspective_mat * cam;
+            scene_root.draw_scene(&perspective_view, &sh, clipping);
+            // Draw objects far away (close planets)
+            gl::Clear(gl::DEPTH_BUFFER_BIT);
+            let clipping = (0.005, 25.0);
+            let perspective_mat: glm::Mat4 = glm::perspective(
+                aspect,
+                conf.fov,       // field of view
+                clipping.0, // near
+                clipping.1   // far
+            );
+            gl::UniformMatrix4fv(
+                u_perspective,
+                1,
+                gl::FALSE,
+                perspective_mat.as_ptr(),
+            );
+            let perspective_view = perspective_mat * cam;
+            scene_root.draw_scene(&perspective_view, &sh, clipping);
+            // Draw objects that are close (landed on planet)
+            gl::Clear(gl::DEPTH_BUFFER_BIT);
+            let clipping = (0.00001, 0.05);
+            let perspective_mat: glm::Mat4 = glm::perspective(
+                aspect,
+                conf.fov,       // field of view
+                clipping.0, // near
+                clipping.1   // far
+            );
+            let perspective_view = perspective_mat * cam;
+            scene_root.draw_scene(&perspective_view, &sh, clipping);
+            
 
             //-----------------------------------------------------------------/
             // Draw GUI if enabled
             //-----------------------------------------------------------------/
             if conf.draw_gui {
+                gl::Disable(gl::DEPTH_TEST);
                 gui_root.update_node_transformations(&glm::identity(), &player.position);
-                gui_root.draw_scene(&perspective_view, &sh);
+                gui_root.draw_scene(&perspective_view, &sh, clipping);
+                gl::Enable(gl::DEPTH_TEST);
             }
         }
 
@@ -651,7 +813,7 @@ fn keyboard_input(
                         )); // closest_planet.position == a
                         // Not quite right, but jetpack physics is alright as well
                         if planet_h - player_h < player::H_ERROR {
-                            player.hspeed = 1.0;
+                            player.hspeed = conf.jump_speed;
                         }
                     },
                     _ => position += up * delta_time * conf.movement_speed,
@@ -670,14 +832,14 @@ fn keyboard_input(
             VirtualKeyCode::Up => {
                 let v = key_debounce.entry(VirtualKeyCode::Up).or_insert(0);
                 if *v == 0 {
-                    conf.movement_speed = conf.movement_speed * 1.1;
+                    conf.movement_speed = conf.movement_speed * 1.6;
                     *v = 10;
                 }
             },
             VirtualKeyCode::Down => {
                 let v = key_debounce.entry(VirtualKeyCode::Down).or_insert(0);
                 if *v == 0 {
-                    conf.movement_speed = conf.movement_speed / 1.1;
+                    conf.movement_speed = conf.movement_speed / 1.6;
                     *v = 10;
                 }
             },
