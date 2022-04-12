@@ -3,7 +3,7 @@ use std::ffi::CString;
 #[allow(unused_imports)]
 use std::{ mem, ptr, os::raw::c_void };
 
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicU64};
 pub static MEMORY_USAGE: AtomicU64 = AtomicU64::new(0);
 
 //-----------------------------------------------------------------------------/

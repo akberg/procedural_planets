@@ -31,7 +31,6 @@ uniform bool u_has_texture;
 // Array of planets
 #define MAX_PLANETS 64
 uniform uint u_planets_len;
-// uniform uint u_closest_planet;
 uniform struct Planet {
     uint planet_id;     // Unique ID for each planet
     // Geometry
@@ -145,32 +144,27 @@ vec4 planet_shader(vec3 position, vec3 normal, uint planet_id)
     // Simple height map
     float radius = 10.0;
     float h = (length(position) - 0.5) * 2.0;
-    vec3 diffuse_color;// = vec3(0.0, 1.0, 0.0);//v_color.rgb;
-    //if (u_node_type == NODE_TYPE_PLANET) {
-        if (h < u_planets[planet_id].color_thresholds[0]) {
-            diffuse_color = u_planets[planet_id].color_scheme[0];
-            //diffuse_color = vec3(0.9137, 0.5176, 0.0);
-        }
-        // else if (h > -0.001 && h < 0.001) {
-        //     diffuse_color = vec3(0.2, 0.2, 0.7);
-        // }
-        else if (h < u_planets[planet_id].color_thresholds[1]) {
-            diffuse_color = u_planets[planet_id].color_scheme[1];
-            //diffuse_color = vec3(0.4588, 0.4588, 0.4588);
-        }
-        else if (h < u_planets[planet_id].color_thresholds[2]) {
-            diffuse_color = u_planets[planet_id].color_scheme[2];
-            //diffuse_color = vec3(0.2, 0.6, 0.4);
-        }
-        else if (h < u_planets[planet_id].color_thresholds[3]) {
-            diffuse_color = u_planets[planet_id].color_scheme[3];
-            //diffuse_color = vec3(0.5, 0.4, 0.4);
-        }
-        else {
-            diffuse_color = u_planets[planet_id].color_scheme[4];
-            //diffuse_color = vec3(1.0, 1.0, 1.0);
-        }
-    //}
+    vec3 diffuse_color;
+    if (h < u_planets[planet_id].color_thresholds[0]) {
+        diffuse_color = u_planets[planet_id].color_scheme[0];
+        //diffuse_color = vec3(0.9137, 0.5176, 0.0);
+    }
+    else if (h < u_planets[planet_id].color_thresholds[1]) {
+        diffuse_color = u_planets[planet_id].color_scheme[1];
+        //diffuse_color = vec3(0.4588, 0.4588, 0.4588);
+    }
+    else if (h < u_planets[planet_id].color_thresholds[2]) {
+        diffuse_color = u_planets[planet_id].color_scheme[2];
+        //diffuse_color = vec3(0.2, 0.6, 0.4);
+    }
+    else if (h < u_planets[planet_id].color_thresholds[3]) {
+        diffuse_color = u_planets[planet_id].color_scheme[3];
+        //diffuse_color = vec3(0.5, 0.4, 0.4);
+    }
+    else {
+        diffuse_color = u_planets[planet_id].color_scheme[4];
+        //diffuse_color = vec3(1.0, 1.0, 1.0);
+    }
     // Lighting
     vec3 ambient_color = diffuse_color.rgb * (u_planets[planet_id].lightsource ? 1.0 : 0.2); //vec3(0.1, 0.05, 0.1);
     vec3 specular_color; // = vec3(0.5, 0.2, 0.1);

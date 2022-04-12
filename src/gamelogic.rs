@@ -527,7 +527,9 @@ pub fn render(
             // Planet transforms and update uniforms
             // Compute closest planet
             //-----------------------------------------------------------------/
+            let timer = std::time::SystemTime::now();
             scene_root.update_node_transformations(&glm::identity(), &player.position);
+            let scene_time = timer.elapsed().unwrap().as_millis();
             
             let mut planets_sorted = vec![];
             for (node, mut planet) in planet_nodes.iter().zip(&mut planets) {
@@ -547,6 +549,7 @@ pub fn render(
             });
             closest_planet_id = planets_sorted[0].1;
             // Stop rendering passed render_limit
+            let timer = std::time::SystemTime::now();
             (0..planets.len()).for_each(|i| {
                 planets[i].lod(&mut (*planet_nodes[i]), player.position);
                 let depth_test = planets[i].radius / glm::length(&(planets[i].position - player.position));
@@ -556,6 +559,7 @@ pub fn render(
                     SceneNodeType::Empty
                 };
             });
+            let lod_time = timer.elapsed().unwrap().as_millis();
 
             gl::Uniform1ui(
                 sh.get_uniform_location("u_planets_len"),
@@ -580,8 +584,8 @@ pub fn render(
             
             let start_draw = now.elapsed().as_secs_f32();
             // Log fps
-            let s = format!("FPS: {:.3} ({:.1}% on CPU", 1.0 / delta_time,
-                delta_time / start_draw * 100.0);
+            let s = format!("FPS: {:.3} ({}ms scene graph, {}ms LoD", 1.0 / delta_time,
+                scene_time, lod_time);
             text_closest_mesh = mesh::Mesh::text_buffer(
                 &s,
                 49.0 / 29.0, 1.0 * s.len() as f32 / 28.0

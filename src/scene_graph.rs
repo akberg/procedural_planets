@@ -3,6 +3,7 @@ extern crate nalgebra_glm as glm;
 use std::mem::ManuallyDrop;
 use std::pin::Pin;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Arc, Mutex};
 
 use crate::{mesh, util};
 
@@ -26,6 +27,10 @@ pub enum LightSourceType {
     Spot,
     Directional
 }
+
+#[derive(Copy, Clone, Debug)]
+pub enum VAOStatus { NotStarted, Generating, Ready }
+impl Default for VAOStatus { fn default() -> Self { VAOStatus::NotStarted } }
 
 pub struct LightSource {
     pub color: glm::TVec3<f32>,
@@ -69,6 +74,7 @@ pub struct SceneNode {
 
     pub vao         : mesh::VAOobj,             // What I should draw
     pub index_count : i32,             // How much of it I shall draw
+    pub vao_generate: Arc<Mutex<(VAOStatus, mesh::Mesh)>>, // False if not ready
 
     // IDs of maps
     pub texture_id  : Option<u32>,
@@ -92,6 +98,7 @@ impl SceneNode {
             distance        : 0.0,
             vao             : Default::default(),
             index_count     : -1,
+            vao_generate      : Arc::new(Mutex::new((VAOStatus::default(), mesh::Mesh::default()))),
             texture_id      : None,
             children        : vec![],
         })))
@@ -111,6 +118,7 @@ impl SceneNode {
             distance        : 0.0,
             vao             : Default::default(),
             index_count     : -1,
+            vao_generate      : Arc::new(Mutex::new((VAOStatus::default(), mesh::Mesh::default()))),
             texture_id      : None,
             children        : vec![],
         })))
@@ -130,6 +138,7 @@ impl SceneNode {
             distance        : 0.0,
             vao             : vao,
             index_count     : vao.n,
+            vao_generate      : Arc::new(Mutex::new((VAOStatus::Ready, mesh::Mesh::default()))),
             texture_id      : None,
             children: vec![],
         })))
@@ -253,8 +262,8 @@ impl SceneNode {
         Planet | 
         Ocean |
         Skybox => {
-            if !matches!(self.node_type, Ocean | Planet) 
-            || (self.distance >= clipping.0 || self.distance < clipping.0) {
+            if self.index_count != -1 && (!matches!(self.node_type, Ocean | Planet) 
+            || (self.distance >= clipping.0 || self.distance < clipping.0)) {
 
                 gl::BindVertexArray(self.vao.vao);
             
