@@ -545,6 +545,7 @@ pub fn render(
                     id as u32,
                 )
             });
+            closest_planet_id = planets_sorted[0].1;
             // Stop rendering passed render_limit
             (0..planets.len()).for_each(|i| {
                 planets[i].lod(&mut (*planet_nodes[i]), player.position);
@@ -576,7 +577,16 @@ pub fn render(
                 player.position.as_ptr()
             );
 
-
+            
+            let start_draw = now.elapsed().as_secs_f32();
+            // Log fps
+            let s = format!("FPS: {:.3} ({:.1}% on CPU", 1.0 / delta_time,
+                delta_time / start_draw * 100.0);
+            text_closest_mesh = mesh::Mesh::text_buffer(
+                &s,
+                49.0 / 29.0, 1.0 * s.len() as f32 / 28.0
+            );
+            text_closest_node.update_buffers(&text_closest_mesh);
             //-----------------------------------------------------------------/
             // Draw skybox
             //-----------------------------------------------------------------/
