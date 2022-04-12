@@ -18,10 +18,10 @@ uniform mat4 u_mvp;         // Model-view-perspective matrix
 void main()
 {
     v_position = position;
+    v_normal = normal;
     v_model_position = position;
     v_color = color;
     v_uv = uv;
-    v_normal = normalize(mat3(u_model) * normal);
     vec4 pos = u_mvp * vec4(v_position, 1.0f);
     gl_Position = (u_node_type == 1) ? pos.xyww : pos;
 

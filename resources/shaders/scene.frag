@@ -7,6 +7,7 @@ layout (binding = 0) uniform sampler2D u_texture;
 #define NODE_TYPE_GEOMETRY2D    2
 #define NODE_TYPE_PLANET        3
 #define NODE_TYPE_OCEAN         4
+float specular_multiplier[] = {0.0, 0.0, 0.0, 0.2, 0.5};
 
 in vec3 v_position;
 in vec4 v_color;
@@ -16,6 +17,10 @@ in vec3 v_model_position;
 
 uniform float u_time;
 uniform vec3 u_player_position;
+uniform mat4 u_model;
+uniform mat4 u_mvp;
+uniform mat4 u_perspective;
+uniform mat4 u_view;
 
 uniform uint u_node_type;
 uniform uint u_current_planet_id;   // Just in case multiple planets should be rendered
@@ -47,6 +52,7 @@ uniform struct Planet {
 
 uniform uint u_lightsources_len;
 uniform uint u_lightsources[MAX_PLANETS];
+uniform uint u_planet_ids_sorted[MAX_PLANETS];
 
 out vec4 color;
 
@@ -191,25 +197,33 @@ vec4 planet_shader(vec3 position, vec3 normal, uint planet_id)
 vec4 phong_light(
     vec3 diffuse_color, 
     vec3 ambient_color, 
-    vec3 position,
+    vec3 position,      // vertex position from model, in model scale
     vec3 normal,
     float alpha
 ) {
+    vec3 planet_center = u_planets[u_current_planet_id].position;
+    mat3 normal_matrix = transpose(inverse(mat3(u_model)));
+    //position = (u_view * u_model * vec4(position, 1.0)).xyz;
+    position += planet_center;
+    normal = normal_matrix * normal;
     vec3 color = ambient_color;
     // Lighting
     vec3 light;
-    float diffuse;// = max(dot(normalize(normal), normalize(light)), 0.0);
-    vec3 camera_dir = normalize(-position);
-    vec3 half_direction;// = normalize(normalize(light) + camera_dir);
+    float diffuse;
+    vec3 camera_dir = normalize(u_player_position-position);
+    vec3 half_direction;
     vec3 specular_color;
-    float specular;// = pow(max(dot(half_direction, normalize(normal)), 0.0), 32.0);
+    float specular = 0.0;// = pow(max(dot(half_direction, normalize(normal)), 0.0), 32.0);
 
     for (int i = 0; i < u_lightsources_len; i++) {
         uint light_id = u_lightsources[i];
-        light = normalize(position - u_planets[light_id].position);
-        diffuse = max(dot(normalize(normal), normalize(light)), 0.0) * 0.5;
-        half_direction = normalize(normalize(light) + camera_dir);
-        specular = pow(max(dot(half_direction, normalize(normal)), 0.0), 16.0);
+        light = u_planets[light_id].position;
+        vec3 light_dir = light - position;
+
+        diffuse = max(dot(normalize(normal), normalize(light_dir)), 0.0) * 0.5;
+        half_direction = normalize(normalize(light_dir) + camera_dir);
+        specular = pow(max(dot(half_direction, normalize(normal)), 0.0), 4.0);
+        specular *= specular_multiplier[u_node_type];
         specular_color = u_planets[light_id].emission;
         color += vec3(diffuse * diffuse_color + specular * specular_color);
     }
@@ -327,23 +341,31 @@ vec4 skybox_shader()
     vec3 ro = u_player_position;        // Ray origin
 
     for (int i = 0; i < u_planets_len; i++) {
-        vec3 ce = u_planets[i].position;    // Center of planet
+        uint ii = u_planet_ids_sorted[i];
+        vec3 ce = u_planets[ii].position;    // Center of planet
 
         vec3 dir = ce - ro;         // Direction from player to planet center
         vec3 dir_n = normalize(dir);//(normalize(p_pos) + 1.0) / 2.0;
 
-        float ra = u_planets[i].radius;
+        float ra = u_planets[ii].radius;
         float r = ra / length(dir);    // Perceived radius from view
 
         float sdf_halo = sphere_sdf(rd, dir_n, r * 1.3); // atmosphere 10% of radius
         float sdf = sphere_sdf(rd, dir_n, r);
 
-        if ((length(dir) < closest_element || closest_element == -1) // Oclusion culling
+        if (true//(length(dir) < closest_element || closest_element == -1) // Oclusion culling
             //&& u_closest_planet != i // Comment out to show when volume is clipped
             && sdf_halo < 0 
         ) {
-            c.rgb = u_planets[i].emission;
-            c.a = min(1.0, -sdf_halo / r * 2.0 - sdf_halo/10.0);//min(1.0, -sdf * r); //0.5; //sdf < 0 ? 1.0 : -sdf_halo / length(dir);
+            vec4 ci;
+            ci.rgb = u_planets[ii].emission;
+            ci.a = min(1.0, -sdf_halo / r * 2.0 - sdf_halo/5.0);//min(1.0, -sdf * r); //0.5; //sdf < 0 ? 1.0 : -sdf_halo / length(dir);
+            if (closest_element == -1) {
+                c = ci;
+            } 
+            else {
+                c += ci * (1.0 - c.a); //mix(ci, c, c.a);
+            }
             closest_element = length(dir);
         }
     }
