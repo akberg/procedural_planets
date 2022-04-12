@@ -24,7 +24,9 @@ toc: true
     * Fixed lighting by completely destroying all good practices in coordinate spaces.
     * Last pressing tasks are multithreading terrain generation to hide work and avoid stopping the render thread, and fixing LoD conditions.
     * A simple extra would be adding more planets and giving them some movement in trajectories
-    * Framerate drops fast as more terrain is generated. Reduced max LoD depth and increase subdivs for every level to improve quality faster with many fewer nodes
+    * Framerate drops fast as more terrain is generated. Reduced max LoD depth and increase subdivs for every level to improve quality faster with many fewer nodes.
+    * Trying to extract mesh generation to another thread. Learnt the hard way that GL contexts are thread specific – no VAOs for me:( Trying to pack entire mesh in a mutex instead, unsure how that affects performance. Seems to work quite nicely, got at least rid of the full stops when generating a lot of new terrain.
+    * Add another planet. Scene starts looking good
 * 11.4:
     * Branching to remove all implicit shading without completely losing it. Keeping some of the code to possibly render some halo/atmosphere. Though clipping is still a thing as well, but passed that a planet may get constant colour.
     * Size of planets array is still an issue, looking into Shader Storage Buffer Object (https://www.khronos.org/opengl/wiki/Shader_Storage_Buffer_Object)
