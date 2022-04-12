@@ -64,8 +64,11 @@ pub struct Planet {
     pub position    : glm::TVec3<f32>,  // Handled by scene node
     pub rotation    : glm::TVec3<f32>,  // Handled by scene node
     pub radius      : f32,              // Radius to ocean level
+    // Physics
     pub gravity     : f32,              // Gravitational pull, for physics
-
+    pub trajectory  : f32,              // Radius of trajectory
+    pub traj_speed  : f32,              // Trajectory speed
+    pub init_angle  : glm::TVec3<f32>,
     // Lighting
     pub lightsource : bool,
     pub emission    : glm::TVec3<f32>,  // Emission colour and intensity
@@ -74,8 +77,8 @@ pub struct Planet {
     pub has_terrain : bool,
     pub max_height  : f32,
     pub color_scheme: [glm::TVec3<f32>; N_LAYERS],
-    pub color_thresholds   : [f32; N_LAYERS-1],
-    pub color_blending      : f32,
+    pub color_thresholds: [f32; N_LAYERS-1],
+    pub color_blending  : f32,
     // Ocean colours
     pub has_ocean   : bool,             // Set true to include ocean
     pub ocean_lvl   : f32,              // offset from radius
