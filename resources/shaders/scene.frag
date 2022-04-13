@@ -7,7 +7,8 @@ layout (binding = 0) uniform sampler2D u_texture;
 #define NODE_TYPE_GEOMETRY2D    2
 #define NODE_TYPE_PLANET        3
 #define NODE_TYPE_OCEAN         4
-float specular_multiplier[] = {0.0, 0.0, 0.0, 0.2, 0.5};
+float specular_multiplier[] = {0.0, 0.0, 0.0, 0.15, 0.25};
+float specular_scale[] = {0.0, 0.0, 0.0, 16.0, 4.0};
 
 in vec3 v_position;
 in vec4 v_color;
@@ -231,10 +232,38 @@ vec4 phong_light(
 
         diffuse = max(dot(normalize(normal), normalize(light_dir)), 0.0) * 0.5;
         half_direction = normalize(normalize(light_dir) + camera_dir);
-        specular = pow(max(dot(half_direction, normalize(normal)), 0.0), 4.0);
+        specular = pow(
+            max(dot(half_direction, normalize(normal)), 0.0), 
+            specular_scale[u_node_type]
+        );
         specular *= specular_multiplier[u_node_type];
         specular_color = u_planets[light_id].emission;
-        color += vec3(diffuse * diffuse_color + specular * specular_color);
+
+        //---------------------------------------------------------------------/
+        // Calculate shadows
+        //---------------------------------------------------------------------/
+        // TODO: Give lightsource a radius
+        // TODO: Soft shadow, let light bend around objects
+        float a = 1.0;
+        for (int i = 0; i < u_planets_len; i++) {
+            if (i == u_current_planet_id) continue;
+
+            vec3 occluder_position = u_planets[i].position;
+            float occluder_radius = u_planets[i].radius;
+
+            vec3 shadow_dir = occluder_position - position;
+            float shadow = length(reject(shadow_dir, light_dir));
+            float halo = 0.8;
+            float shadow_dot = dot(shadow_dir, light_dir);
+
+            if (shadow_dot > 0 && 
+                length(light_dir) > length(shadow_dir) && 
+                shadow < occluder_radius
+            ) {
+                a = 0.0;
+            }
+        }
+        color += a * vec3(diffuse * diffuse_color + specular * specular_color);
     }
     return vec4(color, alpha);
 }
@@ -249,7 +278,7 @@ vec4 ocean_shader(
     vec3 ocean_light_color
 ) {
     vec3 normal = v_normal;
-    vec3 diffuse_color = mix(ocean_dark_color, 1.3 * ocean_light_color, (
+    vec3 diffuse_color = mix(ocean_dark_color*0.5, ocean_light_color, (
         0.5
         + 0.3 * noise3d(((vec3(u_time * 0.01, 0.0, 0.0) + v_position)) * 80.0) 
         + sin(u_time) * 0.1 * noise3d(v_position * 150.0)
@@ -260,7 +289,7 @@ vec4 ocean_shader(
         diffuse_color * 0.2,
         v_position,
         normal, 
-        0.93
+        0.96
     );
 
     return color;
