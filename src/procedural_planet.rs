@@ -69,6 +69,7 @@ pub struct Planet {
     pub trajectory  : f32,              // Radius of trajectory
     pub traj_speed  : f32,              // Trajectory speed
     pub init_angle  : glm::TVec3<f32>,
+    pub parent_id   : Option<usize>,
     // Lighting
     pub lightsource : bool,
     pub emission    : glm::TVec3<f32>,  // Emission colour and intensity
@@ -79,6 +80,7 @@ pub struct Planet {
     pub color_scheme: [glm::TVec3<f32>; N_LAYERS],
     pub color_thresholds: [f32; N_LAYERS-1],
     pub color_blending  : f32,
+    pub max_lod     : usize,
     // Ocean colours
     pub has_ocean   : bool,             // Set true to include ocean
     pub ocean_lvl   : f32,              // offset from radius
@@ -99,9 +101,11 @@ impl Planet {
             node        : std::usize::MAX,
             radius      : 1.0,
             gravity     : 0.5,
+            traj_speed  : 0.01,
             planet_id,
             emission    : glm::vec3(1.0, 1.0, 0.0),
             lightsource : false,
+            max_lod     : MAX_LOD,
             has_ocean   : true,
             ocean_lvl   : 0.0,
             ocean_dark_color    : glm::vec3(0.01, 0.2, 0.3),
@@ -272,7 +276,7 @@ impl Planet {
         let dist = glm::length(&(center_position - player_position));
 
         // TODO: LoD needs tuning, not sure what's best
-        if dist < glm::length(&scale) * self.radius * 2.0 && dot >= 0.0 && level < MAX_LOD {
+        if dist < glm::length(&scale) * self.radius * 2.0 && dot >= 0.0 && level < self.max_lod {
             // Generate next level
             if node.children.len() == 0 {
                 for i in 0..4 {
@@ -330,9 +334,19 @@ impl Planet {
     }
 
     pub fn get_height(&self, pos: &glm::TVec3<f32>) -> f32 {
+        let pos = glm::vec3(
+            (100.0*pos.x).round()/100.0,
+            (100.0*pos.y).round()/100.0,
+            (100.0*pos.z).round()/100.0,
+        );
+        let position = glm::vec3(
+            (100.0*self.position.x).round()/100.0,
+            (100.0*self.position.y).round()/100.0,
+            (100.0*self.position.z).round()/100.0,
+        );
         self.radius * (
             1.0 + mesh::fractal_noise(
-                self.noise_fn, &glm::normalize(&(pos - &self.position)), 
+                self.noise_fn, &glm::normalize(&(pos - &position)), 
                 self.noise_size.into(), self.max_height, 0.0
             )
         )
