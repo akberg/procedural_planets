@@ -20,6 +20,8 @@ toc: true
 # Showcase
 
 # Log
+* 13.4
+    * Tried adding trajectories. Work quite well until landing on a planet. Floating point precision again... To make this work, I would need to change so that camera is always at zero and scene is moved.
 * 12.4
     * Fixed lighting by completely destroying all good practices in coordinate spaces.
     * Last pressing tasks are multithreading terrain generation to hide work and avoid stopping the render thread, and fixing LoD conditions.
