@@ -97,6 +97,11 @@ vec2 sphIntersect( in vec3 ro, in vec3 rd, in vec3 ce, float ra )
     return vec2( -b-h, -b+h );
 }
 
+vec3 reject(vec3 from, vec3 onto)
+{
+    return from - onto * dot(from, onto) / dot(onto, onto);
+}
+
 //-----------------------------------------------------------------------------/
 // Shaders declarations
 //-----------------------------------------------------------------------------/
@@ -109,11 +114,15 @@ vec4 phong_light(
 );
 vec4 planet_shader(vec3 position, vec3 normal, uint planet_id);
 vec4 skybox_shader();
-vec4 ocean_shader(vec3 v_position, vec3 v_normal, vec3 ocean_dark_color, vec3 ocean_light_color);
+vec4 ocean_shader(
+    vec3 v_position, 
+    vec3 v_normal, 
+    vec3 ocean_dark_color, 
+    vec3 ocean_light_color
+);
 
 void main()
 {
-    //color = vec4(1.0, 0.1, 0.9, 1.0);
     switch (u_node_type) {
     case NODE_TYPE_GEOMETRY:
     case NODE_TYPE_PLANET:
@@ -139,12 +148,17 @@ void main()
     }
 }
 
+//-----------------------------------------------------------------------------/
+// Set colour according to colour scheme and height scheme, and apply lighting
+//-----------------------------------------------------------------------------/
 vec4 planet_shader(vec3 position, vec3 normal, uint planet_id)
 {
-    // Simple height map
     float radius = 10.0;
     float h = (length(position) - 0.5) * 2.0;
     vec3 diffuse_color;
+    //-------------------------------------------------------------------------/
+    // Simple height map sets diffuse colour
+    //-------------------------------------------------------------------------/
     if (h < u_planets[planet_id].color_thresholds[0]) {
         diffuse_color = u_planets[planet_id].color_scheme[0];
         //diffuse_color = vec3(0.9137, 0.5176, 0.0);
@@ -165,28 +179,28 @@ vec4 planet_shader(vec3 position, vec3 normal, uint planet_id)
         diffuse_color = u_planets[planet_id].color_scheme[4];
         //diffuse_color = vec3(1.0, 1.0, 1.0);
     }
+
+    //-------------------------------------------------------------------------/
     // Lighting
-    vec3 ambient_color = diffuse_color.rgb * (u_planets[planet_id].lightsource ? 1.0 : 0.2); //vec3(0.1, 0.05, 0.1);
-    vec3 specular_color; // = vec3(0.5, 0.2, 0.1);
+    //  Ambient colour is full diffuse colour for lightsources
+    //  Specular colour is the lightsource's emission colour
+    //-------------------------------------------------------------------------/
+    vec3 ambient_color = diffuse_color.rgb * (
+        u_planets[planet_id].lightsource ? 1.0 : 0.18
+        );
 
-    vec3 camera_dir = normalize(-position);
-    vec3 half_direction; // = normalize(normalize(light) + camera_dir);
-    float specular; // = pow(max(dot(half_direction, normalize(normal)), 0.0), 16.0);
-
-    // Use texture colours 
-    //color = vec4(v_color.rgb * max(0, dot(v_normal, -light)), v_color.a);
-    color = phong_light(
+    return phong_light(
         diffuse_color, 
         ambient_color, 
         position,
         normal, 
-        1.0//normalize(v_position - u_planets[light_id].position)
+        1.0
     );
-
-    return color; //vec4(color, v_color.a);
 }
 
+//-----------------------------------------------------------------------------/
 // Apply Phong lighting for all lightsources in the scene
+//-----------------------------------------------------------------------------/
 // TODO: Add shadows and light intencity
 vec4 phong_light(
     vec3 diffuse_color, 
@@ -195,12 +209,13 @@ vec4 phong_light(
     vec3 normal,
     float alpha
 ) {
+    vec3 color = ambient_color;
+
     vec3 planet_center = u_planets[u_current_planet_id].position;
     mat3 normal_matrix = transpose(inverse(mat3(u_model)));
-    //position = (u_view * u_model * vec4(position, 1.0)).xyz;
     position += planet_center;
     normal = normal_matrix * normal;
-    vec3 color = ambient_color;
+
     // Lighting
     vec3 light;
     float diffuse;
@@ -224,82 +239,15 @@ vec4 phong_light(
     return vec4(color, alpha);
 }
 
-
 //-----------------------------------------------------------------------------/
-// "Seascape" by Alexander Alekseev aka TDM - 2014
-// License Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License.
-// Contact: tdmaav@gmail.com
+// Just blending dark and light ocean color with some simple time variant noise
 //-----------------------------------------------------------------------------/
-// sea constants (to be made uniforms)
-    const float PI	 	= 3.141592;
-    const float EPSILON	= 1e-3;
-    const int ITER_GEOMETRY = 3;
-    const int ITER_FRAGMENT = 5 * 2;
-    const float SEA_HEIGHT = 0.3 / 8.0;
-    const float SEA_CHOPPY = 8.0;
-    const float SEA_SPEED = 0.8 / 64.0;
-    const float SEA_FREQ = 0.16 * 32.0;
-    const vec3 SEA_BASE = vec3(0.0,0.09,0.18);
-    const vec3 SEA_WATER_COLOR = vec3(0.8,0.9,0.6)*0.6;
-    #define SEA_TIME (1.0 + u_time * SEA_SPEED)
-    const mat2 octave_m = mat2(1.6,1.2,-1.2,1.6);
-// sea
-float sea_octave(vec2 uv, float choppy) {
-    uv += noise2d(uv);        
-    vec2 wv = 1.0-abs(sin(uv));
-    vec2 swv = abs(cos(uv));    
-    wv = mix(wv,swv,wv);
-    return pow(1.0-pow(wv.x * wv.y,0.65),choppy);
-}
-float map_detailed(vec3 p) {
-    float freq = SEA_FREQ;
-    float amp = SEA_HEIGHT;
-    float choppy = SEA_CHOPPY;
-    vec2 uv = p.xz; uv.x *= 0.75;
-    
-    float d, h = 0.0;    
-    for(int i = 0; i < ITER_FRAGMENT; i++) {        
-    	d = sea_octave((uv+SEA_TIME)*freq,choppy);
-    	d += sea_octave((uv-SEA_TIME)*freq,choppy);
-        h += d * amp;        
-    	uv *= octave_m; freq *= 1.9; amp *= 0.22;
-        choppy = mix(choppy,1.0,0.2);
-    }
-    return p.y - h;
-}
-/*
-    // vec3 getSkyColor(vec3 e) {
-    //     e.y = (max(e.y,0.0)*0.8+0.2)*0.8;
-    //     return vec3(pow(1.0-e.y,2.0), 1.0-e.y, 0.6+(1.0-e.y)*0.4) * 1.1;
-    // }
-    // vec3 getSeaColor(vec3 p, vec3 n, vec3 l, vec3 eye, vec3 dist) {  
-    //     float fresnel = clamp(1.0 - dot(n,-eye), 0.0, 1.0);
-    //     fresnel = pow(fresnel,3.0) * 0.5;
-            
-    //     vec3 reflected = getSkyColor(reflect(eye,n));    
-    //     vec3 refracted = SEA_BASE + diffuse(n,l,80.0) * SEA_WATER_COLOR * 0.12; 
-        
-    //     vec3 color = mix(refracted,reflected,fresnel);
-        
-    //     float atten = max(1.0 - dot(dist,dist) * 0.001, 0.0);
-    //     color += SEA_WATER_COLOR * (p.y - SEA_HEIGHT) * 0.18 * atten;
-        
-    //     color += vec3(specular(n,l,eye,60.0));
-        
-    //     return color;
-    // }
-*/
-vec3 get_normal(vec3 p, float eps) {
-    vec3 n;
-    n.y = map_detailed(p);    
-    n.x = map_detailed(vec3(p.x+eps,p.y,p.z)) - n.y;
-    n.z = map_detailed(vec3(p.x,p.y,p.z+eps)) - n.y;
-    n.y = eps;
-    return normalize(n);
-}
-
-vec4 ocean_shader(vec3 v_position, vec3 v_normal, vec3 ocean_dark_color, vec3 ocean_light_color)
-{
+vec4 ocean_shader(
+    vec3 v_position, 
+    vec3 v_normal, 
+    vec3 ocean_dark_color, 
+    vec3 ocean_light_color
+) {
     vec3 normal = v_normal;
     vec3 diffuse_color = mix(ocean_dark_color, 1.3 * ocean_light_color, (
         0.5
@@ -314,10 +262,6 @@ vec4 ocean_shader(vec3 v_position, vec3 v_normal, vec3 ocean_dark_color, vec3 oc
         normal, 
         0.93
     );
-    // return mix(
-    //     getSkyColor(dir),
-    //     getSeaColor(p,n,light,dir,dir),
-    // 	pow(smoothstep(0.0,-0.02,dir.y),0.2));
 
     return color;
 }
@@ -335,39 +279,42 @@ vec4 skybox_shader()
     vec3 ro = u_player_position;        // Ray origin
 
     for (int i = 0; i < u_planets_len; i++) {
+        //---------------------------------------------------------------------/
+        // Draw coloured, faded dots on planet positions, doubles as lowest LoD
+        // and atmosphere (latter has some issues).
+        // Might need to implement shadow here as well as in planet shader
+        // (maybe extract to separate function)
+        //---------------------------------------------------------------------/
         uint ii = u_planet_ids_sorted[i];
         vec3 ce = u_planets[ii].position;    // Center of planet
 
         vec3 dir = ce - ro;         // Direction from player to planet center
-        vec3 dir_n = normalize(dir);//(normalize(p_pos) + 1.0) / 2.0;
+        vec3 dir_n = normalize(dir);
 
         float ra = u_planets[ii].radius;
         float r = ra / length(dir);    // Perceived radius from view
 
-        float sdf_halo = sphere_sdf(rd, dir_n, r * 1.3); // atmosphere 10% of radius
+        float sdf_halo = sphere_sdf(rd, dir_n, r * 1.3); // atmosphere 30% of radius
         float sdf = sphere_sdf(rd, dir_n, r);
 
-        if (true//(length(dir) < closest_element || closest_element == -1) // Oclusion culling
-            //&& u_closest_planet != i // Comment out to show when volume is clipped
-            && sdf_halo < 0 
-        ) {
+        if (sdf_halo < 0) {
             vec4 ci;
             ci.rgb = u_planets[ii].emission;
-            ci.a = min(1.0, -sdf_halo / r * 2.0 - sdf_halo/5.0);//min(1.0, -sdf * r); //0.5; //sdf < 0 ? 1.0 : -sdf_halo / length(dir);
+            ci.a = min(1.0, -sdf_halo / r * 2.0 - sdf_halo/5.0);
             if (closest_element == -1) {
                 c = ci;
             } 
             else {
-                c += ci * (1.0 - c.a); //mix(ci, c, c.a);
+                c += ci * (1.0 - c.a);
             }
             closest_element = length(dir);
         }
     }
 
-    //if (closest_element != -1) return c;
-
-    // Starry sky if there's nothing else (not really optimized as this will have to be
-    // computed anyway :/ )
+    //-------------------------------------------------------------------------/
+    // Starry sky if there's nothing else (not really optimized as this will 
+    // have to be computed anyway :/ )
+    //-------------------------------------------------------------------------/
     vec3 res = vec3(2.0, 2.0, 2.0);
     vec3 st = (normalize(rd) + 1.0) / 2.0;
     st *= 50.0;
