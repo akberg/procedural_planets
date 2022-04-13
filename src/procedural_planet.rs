@@ -334,9 +334,19 @@ impl Planet {
     }
 
     pub fn get_height(&self, pos: &glm::TVec3<f32>) -> f32 {
+        let pos = glm::vec3(
+            (100.0*pos.x).round()/100.0,
+            (100.0*pos.y).round()/100.0,
+            (100.0*pos.z).round()/100.0,
+        );
+        let position = glm::vec3(
+            (100.0*self.position.x).round()/100.0,
+            (100.0*self.position.y).round()/100.0,
+            (100.0*self.position.z).round()/100.0,
+        );
         self.radius * (
             1.0 + mesh::fractal_noise(
-                self.noise_fn, &glm::normalize(&(pos - &self.position)), 
+                self.noise_fn, &glm::normalize(&(pos - &position)), 
                 self.noise_size.into(), self.max_height, 0.0
             )
         )

@@ -439,30 +439,7 @@ pub fn render(
         key_debounce.iter_mut().for_each(|(_, v)| if *v > 0 { *v -= 1; });
 
 
-        // Planet trajectories
-        for i in 0..planets.len() {
-            let origin = if let Some(j) = planets[i].parent_id {
-                planet_nodes[j].position
-            } else { 
-                glm::vec3(0.0, 0.0, 0.0) 
-            };
-            let old_position = planet_nodes[i].position;
-            planet_nodes[i].position = origin + glm::vec3(
-                (planets[i].traj_speed * 1.0 * elapsed + planets[i].init_angle.x).sin() * planets[i].trajectory, 
-                planet.init_angle.y, 
-                (planets[i].traj_speed * 1.0 * elapsed + planets[i].init_angle.x).cos() * planets[i].trajectory
-            );
 
-            if i == closest_planet_id && matches!(player.state, PlayerState::Anchored(a) | PlayerState::Landed(a)) {
-                player.position += planet_nodes[i].position - old_position;
-                let a = planet_nodes[closest_planet_id].position;
-                player.state = match player.state {
-                    player::PlayerState::Anchored(_) => player::PlayerState::Anchored(a),
-                    player::PlayerState::Landed(_) => player::PlayerState::Landed(a),
-                    x => x,
-                }
-            }
-        }
         // if matches!(player.state, player::PlayerState::Anchored(a) | player::PlayerState::Landed(a)) {
         // }
 
@@ -561,9 +538,12 @@ pub fn render(
             player::PlayerState::FreeFloat => String::from("Free floating"),
             player::PlayerState::Landed(a)   |
             player::PlayerState::Anchored(a) => String::from(
-                &format!("Player h: {:.3}, Terrain h: {:3}", 
+                &format!("Player h: {:.3}, Terrain h: {:.3}, norm pos: {:.3},{:.3},{:.3}", 
                     glm::length(&(player.feet() - planets[closest_planet_id].position)),
                     planets[closest_planet_id].get_height(&player.position),
+                    glm::normalize(&(player.feet() - planets[closest_planet_id].position)).x,
+                    glm::normalize(&(player.feet() - planets[closest_planet_id].position)).y,
+                    glm::normalize(&(player.feet() - planets[closest_planet_id].position)).z,
                 )
             ),
         };
@@ -591,6 +571,7 @@ pub fn render(
         // First person view
         //---------------------------------------------------------------------/
         let up = player.up();
+        // let cam = glm::look_at(&player.position, &(player.position+player.direction), &up);
         let cam = glm::look_at(&player.position, &(player.position+player.direction), &up);
         let perspective_view = perspective_mat * cam;
 
