@@ -439,7 +439,32 @@ pub fn render(
         key_debounce.iter_mut().for_each(|(_, v)| if *v > 0 { *v -= 1; });
 
 
+        // Planet trajectories
+        for i in 0..planets.len() {
+            let origin = if let Some(j) = planets[i].parent_id {
+                planet_nodes[j].position
+            } else { 
+                glm::vec3(0.0, 0.0, 0.0) 
+            };
+            let old_position = planet_nodes[i].position;
+            let delta_pos = origin + glm::vec3(
+                (1000.0*(planets[i].traj_speed * 0.5 * elapsed + planets[i].init_angle.x).sin() * planets[i].trajectory).round()/1000.0,
+                planet.init_angle.y, 
+                (1000.0*(planets[i].traj_speed * 0.5 * elapsed + planets[i].init_angle.x).cos() * planets[i].trajectory).round()/1000.0, 
+            ) - old_position;
+            planet_nodes[i].position += delta_pos;
 
+            if i == closest_planet_id && matches!(player.state, PlayerState::Anchored(a) | PlayerState::Landed(a)) {
+                eprintln!("{:?}", glm::length(&delta_pos));
+                player.position += delta_pos;
+                let a = planet_nodes[closest_planet_id].position;
+                player.state = match player.state {
+                    player::PlayerState::Anchored(_) => player::PlayerState::Anchored(a),
+                    player::PlayerState::Landed(_) => player::PlayerState::Landed(a),
+                    x => x,
+                }
+            }
+        }
         // if matches!(player.state, player::PlayerState::Anchored(a) | player::PlayerState::Landed(a)) {
         // }
 
