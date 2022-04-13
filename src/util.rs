@@ -36,6 +36,25 @@ pub fn offset<T>(n: u32) -> *const c_void {
     (n * mem::size_of::<T>() as u32) as *const T as *const c_void
 }
 
+pub fn vec4_f32_to_f64(v: &glm::TVec4<f32>) -> glm::TVec4<f64> {
+    glm::vec4(v.x as _, v.y as _, v.z as _, v.w as _)
+}
+pub fn vec4_f64_to_f632(v: &glm::TVec4<f64>) -> glm::TVec4<f32> {
+    glm::vec4(v.x as _, v.y as _, v.z as _, v.w as _)
+}
+pub fn vec3_f32_to_f64(v: &glm::TVec3<f32>) -> glm::TVec3<f64> {
+    glm::vec3(v.x as _, v.y as _, v.z as _)
+}
+pub fn vec3_f64_to_f632(v: &glm::TVec3<f64>) -> glm::TVec3<f32> {
+    glm::vec3(v.x as _, v.y as _, v.z as _)
+}
+pub fn vec2_f32_to_f64(v: &glm::TVec2<f32>) -> glm::TVec2<f64> {
+    glm::vec2(v.x as _, v.y as _)
+}
+pub fn vec2_f64_to_f632(v: &glm::TVec2<f64>) -> glm::TVec2<f32> {
+    glm::vec2(v.x as _, v.y as _)
+}
+
 //-----------------------------------------------------------------------------/
 // OpenGL debug utils
 //-----------------------------------------------------------------------------/
