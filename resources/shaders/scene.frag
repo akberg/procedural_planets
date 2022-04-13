@@ -247,20 +247,30 @@ vec4 phong_light(
         float a = 1.0;
         for (int i = 0; i < u_planets_len; i++) {
             if (i == u_current_planet_id) continue;
-
-            vec3 occluder_position = u_planets[i].position;
-            float occluder_radius = u_planets[i].radius;
-
-            vec3 shadow_dir = occluder_position - position;
-            float shadow = length(reject(shadow_dir, light_dir));
-            float halo = 0.8;
-            float shadow_dot = dot(shadow_dir, light_dir);
-
-            if (shadow_dot > 0 && 
-                length(light_dir) > length(shadow_dir) && 
-                shadow < occluder_radius
-            ) {
-                a = 0.0;
+            
+            vec3 occluder=u_planets[i].position;
+            float occluder_radius=u_planets[i].radius;
+            float light_radius=u_planets[light_id].radius;
+            
+            vec3 v0 = light_dir;
+            vec3 v1 = occluder - position;
+            float r0 = length(v0);
+            float r1 = length(v1);
+            float a0 = light_radius / r0;
+            float a1 = occluder_radius / r1;
+            a = length(cross(v0, v1) / r0 * r1);
+            a = smoothstep(a0-a1, a0+a1, a);
+            float shadow = (1-a) * pow(a1/a0, 2);
+            vec3 shadow_dir=occluder-position;
+            // float shadow=length(reject(shadow_dir,light_dir));
+            // float halo=0.8;
+            float shadow_dot = dot(shadow_dir,light_dir);
+            
+            if(shadow_dot > 0 &&// Occluder is not behind position
+                length(light_dir) > length(shadow_dir)//&& // Light is behind occluder
+                //shadow < occluder_radius
+            ){
+                a -= shadow;
             }
         }
         color += a * vec3(diffuse * diffuse_color + specular * specular_color);
