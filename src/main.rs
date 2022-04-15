@@ -12,6 +12,7 @@ mod player;
 mod procedural_planet;
 mod texture;
 mod gamelogic;
+mod scene;
 
 use glutin::event::{
     Event,
