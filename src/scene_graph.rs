@@ -22,30 +22,30 @@ static NODE_COUNTER: AtomicU64 = AtomicU64::new(0);
 // having what I arbitrarily decided to be the required level of "simplicity of use".
 pub type Node = ManuallyDrop<Pin<Box<SceneNode>>>;
 
-pub enum LightSourceType {
-    Point,
-    Spot,
-    Directional
-}
+// pub enum LightSourceType {
+//     Point,
+//     Spot,
+//     Directional
+// }
 
 #[derive(Copy, Clone, Debug)]
 pub enum VAOStatus { NotStarted, Generating, Ready }
 impl Default for VAOStatus { fn default() -> Self { VAOStatus::NotStarted } }
 
-pub struct LightSource {
-    pub color: glm::TVec3<f32>,
-    pub node: Node,
-    pub light_type: LightSourceType,
-}
-impl LightSource {
-    pub fn new(light_type: LightSourceType, r: f32, g: f32, b: f32) -> Self {
-        LightSource {
-            color: glm::vec3(r, g, b),
-            light_type,
-            node: SceneNode::with_type(SceneNodeType::LightSource)
-        }
-    }
-}
+// pub struct LightSource {
+//     pub color: glm::TVec3<f32>,
+//     pub node: Node,
+//     pub light_type: LightSourceType,
+// }
+// impl LightSource {
+//     pub fn new(light_type: LightSourceType, r: f32, g: f32, b: f32) -> Self {
+//         LightSource {
+//             color: glm::vec3(r, g, b),
+//             light_type,
+//             node: SceneNode::with_type(SceneNodeType::LightSource)
+//         }
+//     }
+// }
 
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub enum SceneNodeType {
@@ -54,7 +54,6 @@ pub enum SceneNodeType {
     Geometry2d = 2, // For gui
     Planet = 3,     // Planet terrain shader
     Ocean = 4,      // Planet ocean shader
-    LightSource,    // Unused
     Empty,          // Empty nodes with other functions
     PlanetSkip,     // Planet, but skip this one, return
 }
@@ -296,11 +295,6 @@ impl SceneNode {
             }
             if matches!(self.node_type, Ocean | Planet) { return } // Planet and Ocean mesh can't have children
         },
-        Empty => {
-            // if self.index_count != -1 {
-            //     eprintln!("Skipping to higher LoD");
-            // }
-        }
         _ => ()
         }
 
