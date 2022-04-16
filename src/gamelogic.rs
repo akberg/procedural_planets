@@ -15,6 +15,8 @@ use crate::texture::load_texture;
 use crate::scene_graph::{self, SceneNode, SceneNodeType};
 
 const POLYMODES: [u32;3] = [gl::FILL, gl::POINT, gl::LINE];
+const SCALING_FACTOR: f32 = 10.0;
+const WORLD_SPEED: f32 = 0.5;
 
 /// Initializes game ad runs main game loop
 pub fn render(
@@ -217,6 +219,8 @@ pub fn render(
     eprintln!("Setup done in {:?}. Starting rendering loop.", 
         setup_timer.elapsed().unwrap()
     );
+    let mut scaled = true;
+    
     loop {
         let now = std::time::Instant::now();
         let elapsed = now.duration_since(first_frame_time).as_secs_f32();
@@ -227,6 +231,15 @@ pub fn render(
 
         let mut computed = vec![];
         if matches!(player.state, PlayerState::Anchored(_) | PlayerState::Landed(_)) {
+            if scaled {
+                // Scale up
+                player.position *= SCALING_FACTOR;
+                for i in 0..planets.len() {
+                    planet_nodes[i].scale *= SCALING_FACTOR;
+                    planets[i].trajectory *= SCALING_FACTOR;
+                }
+                scaled = false;
+            }
             // Reverse origin if player is anchored, origin of scene at center of closest planet
             let mut idx = player.closest_planet_id as usize;
             computed.push(idx);
@@ -238,40 +251,39 @@ pub fn render(
                 computed.push(idx_next);
 
                 planet_nodes[idx_next].position = planets[idx].position - glm::vec3(
-                    (planets[idx].traj_speed * 0.5 * elapsed + planets[idx].init_angle.x).sin() * planets[idx].trajectory,
+                    (planets[idx].traj_speed * WORLD_SPEED * elapsed + planets[idx].init_angle.x).sin() * planets[idx].trajectory,
                     planets[idx].init_angle.y, 
-                    (planets[idx].traj_speed * 0.5 * elapsed + planets[idx].init_angle.x).cos() * planets[idx].trajectory, 
+                    (planets[idx].traj_speed * WORLD_SPEED * elapsed + planets[idx].init_angle.x).cos() * planets[idx].trajectory, 
                 );
                 planets[idx_next].position = planet_nodes[idx_next].position;
                 idx = idx_next;
             }
         }
+        else if !scaled {
+            // Scale down
+            player.position /= SCALING_FACTOR;
+            planet_nodes[0].position /= SCALING_FACTOR;
 
+            for i in 0..planets.len() {
+                planet_nodes[i].scale /= SCALING_FACTOR;
+                planets[i].trajectory /= SCALING_FACTOR;
+            }
+            scaled = true;
+        }
 
         // Planet trajectories, skip any that have already been computed
-        for i in (0..planets.len()).filter(|i| !computed.contains(i)) {
+        // Skip 0 because sun is either origin or computed beforehand
+        for i in (1..planets.len()).filter(|i| !computed.contains(i)) {
             let origin = planet_nodes[planets[i].parent_id].position;
 
             planet_nodes[i].position = origin + glm::vec3(
-                (planets[i].traj_speed * 0.5 * elapsed + planets[i].init_angle.x).sin() * planets[i].trajectory,
+                (planets[i].traj_speed * WORLD_SPEED * elapsed + planets[i].init_angle.x).sin() * planets[i].trajectory,
                 planets[i].init_angle.y, 
-                (planets[i].traj_speed * 0.5 * elapsed + planets[i].init_angle.x).cos() * planets[i].trajectory, 
+                (planets[i].traj_speed * WORLD_SPEED * elapsed + planets[i].init_angle.x).cos() * planets[i].trajectory, 
             );
             planets[i].position = planet_nodes[i].position;
-
-            // if i == player.closest_planet_id && matches!(player.state, PlayerState::Anchored(a) | PlayerState::Landed(a)) {
-            //     eprintln!("{:?}", glm::length(&delta_pos));
-            //     player.position += delta_pos;
-            //     let a = planet_nodes[player.closest_planet_id].position;
-            //     player.state = match player.state {
-            //         player::PlayerState::Anchored(_) => PlayerState::Anchored(a),
-            //         player::PlayerState::Landed(_) => PlayerState::Landed(a),
-            //         x => x,
-            //     }
-            // }
         }
-        // if matches!(player.state, player::PlayerState::Anchored(a) | player::PlayerState::Landed(a)) {
-        // }
+        eprintln!("sun at {:?} player at {:?}", planets[0].position, player.position);
 
         //---------------------------------------------------------------------/
         // Handle keyboard and mouse input
@@ -304,17 +316,6 @@ pub fn render(
                 delta_time,
             );
         }
-
-        // Add movement from anchored planet
-
-        // Center player
-        // for i in 0..planets.len() {
-        //     planet_nodes[i].position = -player.position;
-        // }
-        // player.position = glm::vec3(0.0, 0.0, 0.0);
-        
-
-
 
         // Lastly, center skybox around player
         skybox_node.position = player.position;
@@ -466,9 +467,7 @@ pub fn render(
             // Planet transforms and update uniforms
             // Compute closest planet
             //-----------------------------------------------------------------/
-            let timer = std::time::SystemTime::now();
             scene_root.update_node_transformations(&glm::identity(), &player.position);
-            let scene_time = timer.elapsed().unwrap().as_millis();
             
             let mut planets_sorted = vec![];
             for (node, mut planet) in planet_nodes.iter().zip(&mut planets) {
@@ -491,7 +490,6 @@ pub fn render(
                 player.closest_planet_id = planets_sorted[0].1;
             }
             // Stop rendering passed render_limit
-            let timer = std::time::SystemTime::now();
             (0..planets.len()).for_each(|i| {
                 planets[i].lod(&mut (*planet_nodes[i]), player.position);
                 let depth_test = planets[i].radius / glm::length(&(planets[i].position - player.position));
@@ -501,7 +499,6 @@ pub fn render(
                     SceneNodeType::Empty
                 };
             });
-            let lod_time = timer.elapsed().unwrap().as_millis();
 
             gl::Uniform1ui(
                 sh.get_uniform_location("u_planets_len"),
@@ -523,16 +520,6 @@ pub fn render(
                 player.position.as_ptr()
             );
 
-            
-            // let start_draw = now.elapsed().as_secs_f32();
-            // // Log fps
-            // let s = format!("FPS: {:.3} ({}ms scene graph, {}ms LoD", 1.0 / delta_time,
-            //     scene_time, lod_time);
-            // text_closest_mesh = mesh::Mesh::text_buffer(
-            //     &s,
-            //     49.0 / 29.0, 1.0 * s.len() as f32 / 28.0
-            // );
-            // text_closest_node.update_buffers(&text_closest_mesh);
             //-----------------------------------------------------------------/
             // Draw skybox
             //-----------------------------------------------------------------/
@@ -580,7 +567,7 @@ pub fn render(
             scene_root.draw_scene(&perspective_view, &sh, clipping);
             // Draw objects far away (close planets)
             gl::Clear(gl::DEPTH_BUFFER_BIT);
-            let clipping = (0.005, 25.0);
+            let clipping = (0.001, 25.0);
             let perspective_mat: glm::Mat4 = glm::perspective(
                 aspect,
                 conf.fov,       // field of view
@@ -596,16 +583,16 @@ pub fn render(
             let perspective_view = perspective_mat * cam;
             scene_root.draw_scene(&perspective_view, &sh, clipping);
             // Draw objects that are close (landed on planet)
-            gl::Clear(gl::DEPTH_BUFFER_BIT);
-            let clipping = (0.00001, 0.05);
-            let perspective_mat: glm::Mat4 = glm::perspective(
-                aspect,
-                conf.fov,       // field of view
-                clipping.0, // near
-                clipping.1   // far
-            );
-            let perspective_view = perspective_mat * cam;
-            scene_root.draw_scene(&perspective_view, &sh, clipping);
+            // gl::Clear(gl::DEPTH_BUFFER_BIT);
+            // let clipping = (0.00001, 0.05);
+            // let perspective_mat: glm::Mat4 = glm::perspective(
+            //     aspect,
+            //     conf.fov,       // field of view
+            //     clipping.0, // near
+            //     clipping.1   // far
+            // );
+            // let perspective_view = perspective_mat * cam;
+            // scene_root.draw_scene(&perspective_view, &sh, clipping);
             
 
             //-----------------------------------------------------------------/
@@ -687,36 +674,36 @@ fn keyboard_input(
             VirtualKeyCode::A => {
                 position -= match player.state {
                     FreeFloat => player.right * delta_time * movement_speed,
-                    Anchored(_a) | 
-                    Landed(_a) => player.right * delta_time * movement_speed,
+                    Anchored(_) | 
+                    Landed(_) => player.right * delta_time * movement_speed,
                 }
             },
             VirtualKeyCode::D => {
                 position += match player.state {
                     FreeFloat => player.right * delta_time * movement_speed,
-                    Anchored(_a) | 
-                    Landed(_a) => player.right * delta_time * movement_speed,
+                    Anchored(_) | 
+                    Landed(_) => player.right * delta_time * movement_speed,
                 }
             },
             /* Move forward (inward)/backward, in camera direction */
             VirtualKeyCode::W => {
                 position += match player.state {
                     FreeFloat => player.direction * delta_time * movement_speed,
-                    Anchored(_a) | 
-                    Landed(_a) => _flat_direction * delta_time * movement_speed,
+                    Anchored(_) | 
+                    Landed(_) => _flat_direction * delta_time * movement_speed,
                 }
             },
             VirtualKeyCode::S => {
                 position -= match player.state {
                     FreeFloat => player.direction * delta_time * movement_speed,
-                    Anchored(_a) | 
-                    Landed(_a) => _flat_direction * delta_time * movement_speed,
+                    Anchored(_) | 
+                    Landed(_) => _flat_direction * delta_time * movement_speed,
                 }
             },
             /* Move up/down */
             VirtualKeyCode::Space => {
                 match player.state {
-                    Landed(a) => {
+                    Landed(_) => {
                         // Jump, set horizontal speed
                         let planet_h = closest_planet.get_height(&position);
                         let player_h = glm::length(&(
@@ -793,14 +780,14 @@ fn keyboard_input(
             player.hspeed -= delta_time * closest_planet.gravity;
         }
     }
-    let height = (10000.0 * closest_planet.get_height(&position)).round() / 10000.0;
-    let go_to = (10000.0 * glm::length(&(position - closest_planet.position))).round() / 10000.0;
-    if go_to > height {
+    let height = (100.0 * closest_planet.get_height(&position)).round() / 100.0;
+    let go_to = (100.0 * glm::length(&(position - closest_planet.position))).round() / 100.0;
+    if go_to >= height {
         player_position = position;
     }
-    else if matches!(player.state, Landed(a) | Anchored(a)) {
+    else if matches!(player.state, Landed(_) | Anchored(_)) {
         // Stick to the ground
-        player_position = position + up * (height - go_to);
+        player_position = glm::normalize(&position) * height;//position + up * (height - go_to);
     }
     // else {
     //     eprintln!("Can't move through the ground, stopping");

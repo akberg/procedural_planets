@@ -1,12 +1,11 @@
 use nalgebra_glm as glm;
 use crate::scene_graph::{self, SceneNodeType};
-use crate::{util, mesh, shader::Shader};
-use std::sync::{Arc, Mutex};
+use crate::{mesh, shader::Shader};
 use std::sync::atomic::{AtomicU64, Ordering};
 
 static PLANET_COUNTER: AtomicU64 = AtomicU64::new(0);
 /// Thresholds for level of detail
-const MAX_LOD: usize = 4;
+const MAX_LOD: usize = 5;
 //const THRESHOLD: [f32; MAX_LOD] = [128.0, 32.0, 16.0, 8.0, 4.0, 2.0];
 const SUBDIVS_PER_LEVEL: usize = 16; // 256: 480+380=860ms, 128: 127+98=225ms
 const N_LAYERS: usize = 5;  // Must match with scene.frag:22
@@ -266,17 +265,26 @@ impl Planet {
         ];
 
         let planet_center = self.position;
-        let center_position = planet_center + glm::rotate_z_vec3(&glm::rotate_x_vec3(&(position * self.radius), rotation.x), rotation.z); //.component_mul(&node.scale);
-        // eprintln!("Planet center: {:?}, radius: {}, plane center: {:?}", planet_center, self.radius, center_position);
+        let center_position = planet_center 
+            + glm::rotate_z_vec3(
+                &glm::rotate_x_vec3(
+                    &(position * self.radius), rotation.x
+                ), rotation.z
+            );
         let plane_normal = glm::normalize(&(center_position - planet_center));
         let player_normal = glm::normalize(&(player_position - planet_center));
 
-        let dot = glm::dot(&plane_normal, &glm::normalize(&player_normal)); // cos of angle between player position and plane center
-        let height = self.get_height(&player_position);
-        let dist = glm::length(&(center_position - player_position));
+        // cos of angle between player position and plane center
+        let dot = glm::dot(&plane_normal, &glm::normalize(&player_normal));
+        let angle = dot.acos();
+        let angle_lim = std::f32::consts::FRAC_PI_2 * 1.5 / (level as f32 + 1.0).powf(1.5);
+        
+        // Use height to limit LoD when planet is further away
+        let player_height = glm::length(&(player_position - self.position));
+        let height_lim = self.radius * (1.0+self.max_height)
+            + self.radius * 2.6 / (level as f32+1.0).powf(1.5);
 
-        // TODO: LoD needs tuning, not sure what's best
-        if dist < glm::length(&scale) * self.radius * 2.0 && dot >= 0.0 && level < self.max_lod {
+        if angle < angle_lim && player_height < height_lim && level < self.max_lod {
             // Generate next level
             if node.children.len() == 0 {
                 for i in 0..4 {
@@ -353,8 +361,6 @@ impl Planet {
     }
 
     fn displace_vertices(&self, mesh: &mut mesh::Mesh) {
-        let timer = std::time::SystemTime::now();
-        // eprint!("Generating noise . . . ");
         let mut vertices = mesh::to_array_of_vec3(mesh.vertices.clone());
         for i in 0..vertices.len() {
             let val = 1.0 + mesh::fractal_noise(
@@ -370,16 +376,8 @@ impl Planet {
         let mut normals = mesh::to_array_of_vec3(mesh.normals.clone());
         for i in (0..mesh.index_count).step_by(3) {
             let i = i as usize;
-            // let mut v0 = glm::normalize(&vertices[mesh.indices[i] as usize]);
-            // let mut v1 = glm::rotate_x_vec3(&v0, std::f32::consts::PI / (4.0 * 4096.0));
-            // let mut v2 = glm::rotate_z_vec3(&v0, -std::f32::consts::PI / (4.0 * 4096.0));
-            // v0 *= 1.0 + fractal_noise(perlin, &v0, size, height, offset);
-            // v1 *= 1.0 + fractal_noise(perlin, &v1, size, height, offset);
-            // v2 *= 1.0 + fractal_noise(perlin, &v2, size, height, offset);
             let v1 = vertices[mesh.indices[i + 1] as usize] - vertices[mesh.indices[i] as usize];
             let v2 = vertices[mesh.indices[i + 2] as usize] - vertices[mesh.indices[i] as usize];
-            // v1 = v1 - v0;
-            // v2 = v2 - v0;
             let norm = glm::normalize(&glm::cross(&v1, &v2));
             normals[mesh.indices[i] as usize] = norm;
             normals[mesh.indices[i + 1] as usize] = norm;
@@ -387,7 +385,5 @@ impl Planet {
         }
         mesh.normals = mesh::from_array_of_vec3(normals);
         mesh.vertices = mesh::from_array_of_vec3(vertices);
-        // eprintln!("took {:?}", timer.elapsed().unwrap());
-
     }
 }
