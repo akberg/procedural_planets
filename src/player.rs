@@ -3,7 +3,7 @@ use nalgebra_glm as glm;
 // - Mark closest planet and apply UP with an on/off switch
 
 pub const MAX_H_SPEED: f32 = 1.0;  // Maximum horizontal speed from gravity
-pub const H_ERROR: f32 = 0.0001;       // Margin of error for height computation
+pub const H_ERROR: f32 = 0.001;       // Margin of error for height computation
 
 #[derive(Debug)]
 pub enum PlayerState { 
@@ -26,7 +26,7 @@ pub struct Player {
     pub height: f32,                // Camera height over movement position (feet)
     pub hspeed: f32,                // Horizontal speed, for simple physics
 
-    pub closest_planet_id: i32,
+    pub closest_planet_id: usize,
 }
 
 impl Player {
