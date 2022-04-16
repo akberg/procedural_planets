@@ -20,6 +20,11 @@ toc: true
 # Showcase
 
 # Log
+* 14-16.4
+    * Work on those damned trajectories. Finally modified so closest planet becomes center of scene when switching to Landed/Anchored mode, removing lots of moving parts from player-planet dynamics and removing some sources of floating point errors.
+    * Extracted planet creation to file scene.rs. Shortens the gamelogic function and more easily allows creating different scenes.
+    * Still no handling of planet rotation, shouldn't be too hard to add now.
+    * Thinking of scaling the entire scene up and down instead of actual movement speed in order to keep the illusion of toggling "space speed" and "landed speed" but staying at 1 as the actual movement speed. Could further help on floating point precision.
 * 13.4
     * Tried adding trajectories. Work quite well until landing on a planet. Floating point precision again... To make this work, I would need to change so that camera is always at zero and scene is moved.
 * 12.4

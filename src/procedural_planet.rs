@@ -69,7 +69,7 @@ pub struct Planet {
     pub trajectory  : f32,              // Radius of trajectory
     pub traj_speed  : f32,              // Trajectory speed
     pub init_angle  : glm::TVec3<f32>,
-    pub parent_id   : Option<usize>,
+    pub parent_id   : usize,
     // Lighting
     pub lightsource : bool,
     pub emission    : glm::TVec3<f32>,  // Emission colour and intensity

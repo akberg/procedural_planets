@@ -258,9 +258,9 @@ vec4 phong_light(
             float r1 = length(v1);
             float a0 = light_radius / r0;
             float a1 = occluder_radius / r1;
-            a = length(cross(v0, v1) / r0 * r1);
+            a = length(cross(v0, v1)) / r0 * r1;
             a = smoothstep(a0-a1, a0+a1, a);
-            float shadow = (1-a) * pow(a1/a0, 2);
+            float shadow = (1-a) * pow(a1/a0, 1);
             vec3 shadow_dir=occluder-position;
             // float shadow=length(reject(shadow_dir,light_dir));
             // float halo=0.8;
