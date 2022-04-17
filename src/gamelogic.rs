@@ -581,7 +581,7 @@ pub fn render(
             scene_root.draw_scene(&perspective_view, &sh, clipping);
             // Draw objects far away (close planets)
             gl::Clear(gl::DEPTH_BUFFER_BIT);
-            let clipping = (0.001, 25.0);
+            let clipping = (0.005, 25.0);
             let perspective_mat: glm::Mat4 = glm::perspective(
                 aspect,
                 conf.fov,       // field of view
@@ -597,16 +597,16 @@ pub fn render(
             let perspective_view = perspective_mat * cam;
             scene_root.draw_scene(&perspective_view, &sh, clipping);
             // Draw objects that are close (landed on planet)
-            // gl::Clear(gl::DEPTH_BUFFER_BIT);
-            // let clipping = (0.00001, 0.05);
-            // let perspective_mat: glm::Mat4 = glm::perspective(
-            //     aspect,
-            //     conf.fov,       // field of view
-            //     clipping.0, // near
-            //     clipping.1   // far
-            // );
-            // let perspective_view = perspective_mat * cam;
-            // scene_root.draw_scene(&perspective_view, &sh, clipping);
+            gl::Clear(gl::DEPTH_BUFFER_BIT);
+            let clipping = (0.0005, 2.5);
+            let perspective_mat: glm::Mat4 = glm::perspective(
+                aspect,
+                conf.fov,       // field of view
+                clipping.0, // near
+                clipping.1   // far
+            );
+            let perspective_view = perspective_mat * cam;
+            scene_root.draw_scene(&perspective_view, &sh, clipping);
             
 
             //-----------------------------------------------------------------/
