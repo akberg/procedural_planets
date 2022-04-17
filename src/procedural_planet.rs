@@ -3,13 +3,11 @@ use crate::scene_graph::{self, SceneNodeType};
 use crate::{mesh, shader::Shader};
 use std::sync::atomic::{AtomicU64, Ordering};
 
-static PLANET_COUNTER: AtomicU64 = AtomicU64::new(0);
-/// Thresholds for level of detail
-const MAX_LOD: usize = 5;
-//const THRESHOLD: [f32; MAX_LOD] = [128.0, 32.0, 16.0, 8.0, 4.0, 2.0];
-const SUBDIVS_PER_LEVEL: usize = 16; // 256: 480+380=860ms, 128: 127+98=225ms
-const N_LAYERS: usize = 5;  // Must match with scene.frag:22
+use crate::globals::*;
+use crate::util;
 
+pub static PLANET_COUNTER: AtomicU64 = AtomicU64::new(0);
+pub static IN_FLIGHT: AtomicU64 = AtomicU64::new(0);
 
 /// Procedurally generated planet. Will use a quad-tree form, each side
 /// either drawing a plane or subdividing into nodes covering recursively
@@ -317,6 +315,11 @@ impl Planet {
         return match status {
             NotStarted => {
                 // Start thread generating terrain
+                let in_flight = IN_FLIGHT.load(Ordering::Relaxed);
+                if in_flight >= MAX_IN_FLIGHT { 
+                    return false; 
+                }
+                IN_FLIGHT.fetch_add(1, Ordering::Relaxed);
                 let planet = *self;
                 *arc_vao_status.lock().unwrap() = (Generating, mesh::Mesh::default());
                 std::thread::spawn(move || {
@@ -325,6 +328,7 @@ impl Planet {
                     );
                     planet.displace_vertices(&mut planet_mesh);
                     *arc_vao_status.lock().unwrap() = (Ready, planet_mesh);
+                    IN_FLIGHT.fetch_sub(1, Ordering::Relaxed);
                 });
                 false
             },
@@ -361,7 +365,7 @@ impl Planet {
     }
 
     fn displace_vertices(&self, mesh: &mut mesh::Mesh) {
-        let mut vertices = mesh::to_array_of_vec3(mesh.vertices.clone());
+        let mut vertices = util::to_array_of_vec3(mesh.vertices.clone());
         for i in 0..vertices.len() {
             let val = 1.0 + mesh::fractal_noise(
                 self.noise_fn, 
@@ -373,7 +377,7 @@ impl Planet {
         }
         
         // TODO: Solve the seams, could reuse the noise generator and use polar coordinates
-        let mut normals = mesh::to_array_of_vec3(mesh.normals.clone());
+        let mut normals = util::to_array_of_vec3(mesh.normals.clone());
         for i in (0..mesh.index_count).step_by(3) {
             let i = i as usize;
             let v1 = vertices[mesh.indices[i + 1] as usize] - vertices[mesh.indices[i] as usize];
@@ -383,7 +387,7 @@ impl Planet {
             normals[mesh.indices[i + 1] as usize] = norm;
             normals[mesh.indices[i + 2] as usize] = norm;
         }
-        mesh.normals = mesh::from_array_of_vec3(normals);
-        mesh.vertices = mesh::from_array_of_vec3(vertices);
+        mesh.normals = util::from_array_of_vec3(normals);
+        mesh.vertices = util::from_array_of_vec3(vertices);
     }
 }

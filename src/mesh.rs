@@ -1,8 +1,4 @@
 use tobj;
-use itertools::Itertools;
-// use std::fmt::Debug;
-use glm::Scalar;
-
 use crate::util;
 
 // internal helper
@@ -16,71 +12,6 @@ fn generate_color_vec(color: glm::TVec4<f32>, num: usize) -> Vec<f32> {
 //     return a.min(b) - h.powi(3) * k / 6.0;
 // }
 
-// glm utils
-
-#[allow(unused)]
-/// Convert an array of Vec2 into an array of numbers
-pub fn from_array_of_vec2<T: Scalar + Copy>(arr: Vec<glm::TVec2<T>>) -> Vec<T> {
-    arr.iter()
-    .map(|v| vec![v[0], v[1]])
-    .flatten()
-    .collect::<_>()
-}
-#[allow(unused)]
-/// Convert an array of Vec3 into an array of numbers
-pub fn from_array_of_vec3<T: Scalar + Copy>(arr: Vec<glm::TVec3<T>>) -> Vec<T> {
-    arr.iter()
-    .map(|v| vec![v[0], v[1], v[2]])
-    .flatten()
-    .collect::<_>()
-}
-#[allow(unused)]
-/// Convert an array of Vec4 into an array of numbers
-pub fn from_array_of_vec4<T: Scalar + Copy>(arr: Vec<glm::TVec4<T>>) -> Vec<T> {
-    arr.iter()
-        .map(|v| vec![v[0], v[1], v[2], v[3]])
-        .flatten()
-        .collect::<_>()
-}
-#[allow(unused)]
-/// Convert an array of numbers representing 2-tuples to array of vec2
-pub fn to_array_of_vec2<T: Scalar + Copy>(arr: Vec<T>) -> Vec<glm::TVec2<T>> {
-    arr.iter()
-    .chunks(2)
-    .into_iter()
-    .map(|mut step| glm::vec2(
-        *step.next().unwrap(), 
-        *step.next().unwrap()
-    ))
-    .collect::<_>()
-}
-#[allow(unused)]
-/// Convert an array of numbers representing 3-tuples to array of vec3
-pub fn to_array_of_vec3<T: Scalar + Copy>(arr: Vec<T>) -> Vec<glm::TVec3<T>> {
-    arr.iter()
-    .chunks(3)
-    .into_iter()
-    .map(|mut step| glm::vec3(
-        *step.next().unwrap(), 
-        *step.next().unwrap(),
-        *step.next().unwrap(),
-    ))
-    .collect::<_>()
-}
-#[allow(unused)]
-/// Convert an array of numbers representing 4-tuples to array of vec4
-pub fn to_array_of_vec4<T: Scalar + Copy>(arr: Vec<T>) -> Vec<glm::TVec4<T>> {
-    arr.iter()
-        .chunks(4)
-        .into_iter()
-        .map(|mut step| glm::vec4(
-            *step.next().unwrap(), 
-            *step.next().unwrap(),
-            *step.next().unwrap(),
-            *step.next().unwrap(),
-        ))
-        .collect::<_>()
-}
 
 // GL util VAO object
 #[derive(Copy, Clone, Default, Debug)]
@@ -316,10 +247,10 @@ impl Mesh {
         }
         let vertex_count = vertices.len();
         Mesh {
-            vertices: from_array_of_vec3(vertices),
+            vertices: util::from_array_of_vec3(vertices),
             indices: mindices,
-            normals: from_array_of_vec3(mnormals),
-            texture_coordinates: from_array_of_vec2(texture_coordinates),
+            normals: util::from_array_of_vec3(mnormals),
+            texture_coordinates: util::from_array_of_vec2(texture_coordinates),
             colors: generate_color_vec(color, vertex_count),
             index_count: 36
         }
@@ -364,9 +295,9 @@ impl Mesh {
         }
 
         Mesh {
-            vertices: from_array_of_vec3(vertices),
-            normals: from_array_of_vec3(normals),
-            texture_coordinates: from_array_of_vec2(texture),
+            vertices: util::from_array_of_vec3(vertices),
+            normals: util::from_array_of_vec3(normals),
+            texture_coordinates: util::from_array_of_vec2(texture),
             colors: generate_color_vec(glm::vec4(1.0, 1.0, 1.0, 1.0), vertex_count),
             indices,
             index_count,
@@ -444,9 +375,9 @@ impl Mesh {
 
         // eprintln!("took {:?}", timer.elapsed().unwrap());
         Mesh {
-            vertices: from_array_of_vec3(vertices),
-            normals: from_array_of_vec3(normals),
-            texture_coordinates: from_array_of_vec2(texture),
+            vertices: util::from_array_of_vec3(vertices),
+            normals: util::from_array_of_vec3(normals),
+            texture_coordinates: util::from_array_of_vec2(texture),
             colors: generate_color_vec(color.unwrap_or(glm::vec4(1.0, 1.0, 1.0, 1.0)), vertex_count),
             indices,
             index_count: index_count as i32,

@@ -4,15 +4,16 @@ use std::{ mem, ptr, os::raw::c_void };
 use std::thread;
 use std::sync::{Mutex, Arc, RwLock};
 
-mod shader;
-mod util;
+mod gamelogic;
+mod globals;
 mod mesh;
-mod scene_graph;
 mod player;
 mod procedural_planet;
-mod texture;
-mod gamelogic;
 mod scene;
+mod scene_graph;
+mod shader;
+mod texture;
+mod util;
 
 use glutin::event::{
     Event,
@@ -25,8 +26,7 @@ use glutin::event::{
 
 use glutin::event_loop::ControlFlow;
 
-const SCREEN_W: u32 = 1920;
-const SCREEN_H: u32 = 1080;
+use crate::globals::{SCREEN_W, SCREEN_H};
 
 
 fn main() {

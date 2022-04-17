@@ -12,11 +12,11 @@ use crate::*;
 use crate::player::PlayerState;
 use crate::procedural_planet as planet;
 use crate::texture::load_texture;
-use crate::scene_graph::{self, SceneNode, SceneNodeType};
+use crate::scene_graph::{SceneNode, SceneNodeType};
+use crate::globals::*;
 
 const POLYMODES: [u32;3] = [gl::FILL, gl::POINT, gl::LINE];
-const SCALING_FACTOR: f32 = 10.0;
-const WORLD_SPEED: f32 = 0.5;
+
 
 /// Initializes game ad runs main game loop
 pub fn render(
@@ -74,10 +74,9 @@ pub fn render(
         conf.init_position[1],
         conf.init_position[2],
     );
-    let mut h_angle = conf.init_h_angle;
-    let mut v_angle = conf.init_v_angle;
+    let h_angle = conf.init_h_angle;
+    let v_angle = conf.init_v_angle;
     player.direction = util::vec_direction(h_angle, v_angle);
-    let mut up = glm::vec3(0.0, 1.0, 0.0);
     player.right = util::vec_right(h_angle);
     
 
@@ -146,6 +145,22 @@ pub fn render(
     text_gfxmem_node.texture_id = Some(charmap_id);
     text_gfxmem_node.position = glm::vec3(-1.0, -1.0 + text_scale * 0.05 * 6.0, 0.0);
     text_gfxmem_node.scale = glm::vec3(1.0, 1.0, 1.0) * text_scale;
+
+    let controls_text = [
+        "WSAD/SHIFT/SPACE : movement",
+        "UP/DOWN : increase and decrease movement speed",
+        "F : cycle player state (free/anchored/landed)",
+        "I : toggle text interface",
+        "M : cycle polygon modes",
+    ].iter().enumerate().map(|(i, s)| {
+        let text_mesh = mesh::Mesh::text_buffer(s, 49.0 / 29.0, 1.0 * s.len() as f32 / 28.0);
+        let mut text_node = SceneNode::from_vao(unsafe { text_mesh.mkvao() });
+        text_node.node_type = SceneNodeType::Geometry2d;
+        text_node.texture_id = Some(charmap_id);
+        text_node.position = glm::vec3(-1.0, 1.0 - text_scale * 0.05 * (i+1) as f32, 0.0);
+        text_node.scale = glm::vec3(1.0, 1.0, 1.0) * text_scale;
+        text_node
+    });
     
 
     //-------------------------------------------------------------------------/
@@ -155,7 +170,6 @@ pub fn render(
     // Skybox, inverted cube that stays centered around the player
     let skybox_mesh = mesh::Mesh::cube(
         glm::vec3(1.0, 1.0, 1.0), // Defines visible distance of other objects
-        //glm::vec3(conf.clip_far-0.1, conf.clip_far-0.1, conf.clip_far-0.1), // Defines visible distance of other objects
         glm::vec2(1.0, 1.0), true, true, 
         glm::vec3(1.0, 1.0, 1.0),
         glm::vec4(0.05, 0.01, 0.06, 0.2),
@@ -167,7 +181,7 @@ pub fn render(
     //-------------------------------------------------------------------------/
     // Scene setup, build planets
     //-------------------------------------------------------------------------/
-    let (mut planets, mut planet_nodes, mut lightsources) = scene::create_scene();
+    let (mut planets, mut planet_nodes, lightsources) = scene::create_scene();
     //-------------------------------------------------------------------------/
     // Organize planets and nodes
     //-------------------------------------------------------------------------/
@@ -197,6 +211,7 @@ pub fn render(
     gui_root.add_child(&text_height_node);
     gui_root.add_child(&text_mouse_node);
     gui_root.add_child(&text_gfxmem_node);
+    controls_text.for_each(|nd| gui_root.add_child(&nd));
 
 
     //-------------------------------------------------------------------------/        
@@ -283,7 +298,6 @@ pub fn render(
             );
             planets[i].position = planet_nodes[i].position;
         }
-        eprintln!("sun at {:?} player at {:?}", planets[0].position, player.position);
 
         //---------------------------------------------------------------------/
         // Handle keyboard and mouse input
@@ -667,7 +681,7 @@ fn keyboard_input(
     // Transform from camera position to movement
     let mut player_position = player.position - up * player.height;
     let mut position = player_position;
-    let movement_speed = conf.movement_speed; // TODO: Try using to scale planets instead of actual movement speed
+    let movement_speed = conf.movement_speed;
     for key in keys.iter() {
         match key {
             /* Move left/right */
@@ -710,7 +724,7 @@ fn keyboard_input(
                             player.feet() - closest_planet.position
                         )); // closest_planet.position == a
                         // Not quite right, but jetpack physics is alright as well
-                        if planet_h - player_h < player::H_ERROR {
+                        if planet_h - player_h < H_ERROR {
                             player.hspeed = conf.jump_speed;
                         }
                     },
@@ -776,7 +790,7 @@ fn keyboard_input(
     if matches!(player.state, Landed(_)) {
         // Apply gravitational pull
         position += up * player.hspeed;
-        if player.hspeed > -player::MAX_H_SPEED {
+        if player.hspeed > -MAX_H_SPEED {
             player.hspeed -= delta_time * closest_planet.gravity;
         }
     }
@@ -787,10 +801,7 @@ fn keyboard_input(
     }
     else if matches!(player.state, Landed(_) | Anchored(_)) {
         // Stick to the ground
-        player_position = glm::normalize(&position) * height;//position + up * (height - go_to);
+        player_position = glm::normalize(&position) * height;
     }
-    // else {
-    //     eprintln!("Can't move through the ground, stopping");
-    // }
     player.position = player_position + up * player.height;
 }
