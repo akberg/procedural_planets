@@ -1,5 +1,6 @@
 use tobj;
 use crate::util;
+use crate::globals::FRACTAL_ITERATIONS;
 
 // internal helper
 fn generate_color_vec(color: glm::TVec4<f32>, num: usize) -> Vec<f32> {
@@ -395,7 +396,7 @@ pub fn fractal_noise(generator: Perlin, point: &glm::TVec3<f32>, size: f64, heig
     let mut amp = 1.0;
     let mut freq = 1.0;
 
-    for _ in 0..5 {
+    for _ in 0..FRACTAL_ITERATIONS {
         let point = point * freq;
         noise_sum += generator.get([
             point.x as f64 * size, // + seed as f64,
