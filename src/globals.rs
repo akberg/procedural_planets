@@ -1,19 +1,26 @@
 /// Collect project-wide global values and constants
 
-// gamelogic.rs
+//-gamelogic.rs----------------------------------------------------------------/
+
 pub const SCALING_FACTOR: f32 = 10.0;
 pub const WORLD_SPEED: f32 = 0.5;
 
-// main.rs
+//-main.rs---------------------------------------------------------------------/
+
 pub const SCREEN_W: u32 = 1920;
 pub const SCREEN_H: u32 = 1080;
 
-// player.rs
+//-mesh.rs---------------------------------------------------------------------/
 
-pub const MAX_H_SPEED: f32 = 1.0;  // Maximum horizontal speed from gravity
-pub const H_ERROR: f32 = 0.001;       // Margin of error for height computation
+// Iterations of fractal noise
+pub const FRACTAL_ITERATIONS: usize = 8;
 
-// procedural_planets.rs
+//-player.rs-------------------------------------------------------------------/
+
+pub const MAX_H_SPEED: f32 = 1.0;   // Maximum horizontal speed from gravity
+pub const H_ERROR: f32 = 0.001;     // Margin of error for height computation
+
+//-procedural_planets.rs-------------------------------------------------------/
 
 /// Thresholds for level of detail
 pub const MAX_LOD: usize = 4;
