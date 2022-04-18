@@ -187,7 +187,7 @@ vec4 planet_shader(vec3 position, vec3 normal, uint planet_id)
     //  Specular colour is the lightsource's emission colour
     //-------------------------------------------------------------------------/
     vec3 ambient_color = diffuse_color.rgb * (
-        u_planets[planet_id].lightsource ? 1.0 : 0.18
+        u_planets[planet_id].lightsource ? 1.0 : 0.23
         );
 
     return phong_light(
