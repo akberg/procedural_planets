@@ -390,13 +390,15 @@ impl Mesh {
 use noise::{NoiseFn, Perlin};
 
 /// Some iterations of noise function to create a fractal noise
+/// 
+/// This apparently is also called fractal Brownian Motion (https://thebookofshaders.com/13/)
 /// - `offset` deprecated
 pub fn fractal_noise(generator: Perlin, point: &glm::TVec3<f32>, size: f64, height: f32, _offset: f32) -> f32 {
     let mut noise_sum = 0.0;
     let mut amp = 1.0;
     let mut freq = 1.0;
 
-    for _ in 0..FRACTAL_ITERATIONS {
+    for _ in 0..FRACTAL_ITERATIONS {    // octaves
         let point = point * freq;
         noise_sum += generator.get([
             point.x as f64 * size, // + seed as f64,

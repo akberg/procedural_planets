@@ -2,6 +2,7 @@ use nalgebra_glm as glm;
 use crate::scene_graph::{self, SceneNodeType};
 use crate::{mesh, shader::Shader};
 use std::sync::atomic::{AtomicU64, Ordering};
+use lazy_static::lazy_static;
 
 use crate::globals::*;
 use crate::util;
@@ -84,16 +85,23 @@ pub struct Planet {
     pub ocean_dark_color    : glm::TVec3<f32>,
     pub ocean_light_color   : glm::TVec3<f32>,
 
-    pub noise_fn    : noise::Perlin,
+    pub noise_fn    : u32,
     pub seed        : u32,
-    pub noise_size  : f32,
+    //pub noise_size  : f32,
+    pub noise       : NoiseParams,
+    perlin0         : noise::Perlin,
+    perlin1         : noise::Perlin,
+    perlin2         : noise::Perlin,
 }
 
 use noise::*;
 impl Planet {
     pub fn new() -> Self {
-        let planet_id = PLANET_COUNTER.fetch_add(1, Ordering::Relaxed) as usize;
         let seed = rand::random::<_>();
+        Self::with_seed(seed)
+    }
+    pub fn with_seed(seed: u32) -> Self {
+        let planet_id = PLANET_COUNTER.fetch_add(1, Ordering::Relaxed) as usize;
         Planet {
             node        : std::usize::MAX,
             radius      : 1.0,
@@ -107,17 +115,15 @@ impl Planet {
             ocean_lvl   : 0.0,
             ocean_dark_color    : glm::vec3(0.01, 0.2, 0.3),
             ocean_light_color   : glm::vec3(0.04, 0.3, 0.43),
-            noise_fn    : noise::Perlin::new().set_seed(seed),
+            noise_fn    : 0,
+            perlin0     : noise::Perlin::new().set_seed(seed),
+            perlin1     : noise::Perlin::new().set_seed(seed*seed),
+            perlin2     : noise::Perlin::new().set_seed(seed*seed/2),
             seed,
-            noise_size  : 10.0,
+            //noise_size  : 10.0,
+
             ..Default::default()
         }
-    }
-    pub fn with_seed(seed: u32) -> Self {
-        let mut planet = Self::new();
-        planet.seed = seed;
-        planet.noise_fn = noise::Perlin::new().set_seed(seed);
-        planet
     }
     
     /// Update uniforms for planet in shader
@@ -356,23 +362,25 @@ impl Planet {
             (100.0*self.position.y).round()/100.0,
             (100.0*self.position.z).round()/100.0,
         );
-        self.radius * (
-            1.0 + mesh::fractal_noise(
-                self.noise_fn, &glm::normalize(&(pos - &position)), 
-                self.noise_size.into(), self.max_height, 0.0
-            )
-        )
+        // self.radius * (
+        //     1.0 + mesh::fractal_noise(
+        //         self.noise_fn, &glm::normalize(&(pos - &position)), 
+        //         self.noise_size.into(), self.max_height, 0.0
+        //     )
+        // )
+        self.radius * (1.0 + self.noise(&glm::normalize(&(pos - &position))))
     }
 
     fn displace_vertices(&self, mesh: &mut mesh::Mesh) {
         let mut vertices = util::to_array_of_vec3(mesh.vertices.clone());
         for i in 0..vertices.len() {
-            let val = 1.0 + mesh::fractal_noise(
-                self.noise_fn, 
-                &glm::normalize(&vertices[i]), 
-                self.noise_size.into(), 
-                self.max_height, 
-                0.0);
+            // let val = 1.0 + mesh::fractal_noise(
+            //     self.noise_fn, 
+            //     &glm::normalize(&vertices[i]), 
+            //     self.noise_size.into(), 
+            //     self.max_height, 
+            //     0.0);
+            let val = 1.0 + self.noise(&glm::normalize(&vertices[i]));
             vertices[i] *= val;
         }
         
@@ -389,5 +397,85 @@ impl Planet {
         }
         mesh.normals = util::from_array_of_vec3(normals);
         mesh.vertices = util::from_array_of_vec3(vertices);
+    }
+
+    fn noise(&self, pos: &glm::Vec3) -> f32 {
+        let params = self.noise;
+        match self.noise_fn {
+            _ => {
+                // Simple fractal noise. This apparently is also called 
+                // fractal Brownian Motion (https://thebookofshaders.com/13/)
+                let mut noise_sum = 0.0;
+                // Initial values
+                let mut amp = params.amplitude;
+                let mut freq = params.frequency;
+                // Properties
+                let gain_pos = pos * params.gain_frequency;
+                let gain = params.gain 
+                    + params.gain_amplitude * (
+                        self.perlin2.get(
+                            [pos.x.into(), pos.y.into(), pos.z.into()]
+                        ) as f32 + params.gain_offset
+                    );
+                let lac_pos = pos * params.lac_frequency;
+                let lacunarity = params.lacunarity 
+                    + params.lac_amplitude * (
+                        self.perlin1.get(
+                            [lac_pos.x.into(), lac_pos.y.into(), lac_pos.z.into()]
+                        ) as f32 + params.lac_offset
+                    );
+
+                // Iterations - or octaves
+                for _ in 0..params.octaves {
+                    let point = pos * freq;
+                    noise_sum += self.perlin0.get([
+                        (point.x * self.noise.size) as f64, // + seed as f64,
+                        (point.y * self.noise.size) as f64, // + seed as f64,
+                        (point.z * self.noise.size) as f64, // + seed as f64,
+                    ]) as f32 * amp * self.max_height;
+                    freq *= lacunarity;
+                    amp *= gain;
+                }
+                noise_sum
+            }
+        }
+    }
+}
+
+#[derive(Debug, Copy, Clone)]
+pub struct NoiseParams {
+    // Initial values
+    pub size        : f32,      // Constant multiplier on frequency
+    pub amplitude   : f32,
+    pub frequency   : f32,
+    // Properties
+    pub octaves     : usize,
+    pub gain        : f32,      // Constant gain
+    pub gain_frequency  : f32,
+    pub gain_amplitude  : f32,
+    pub gain_offset : f32,
+    pub lacunarity  : f32,      // Constant lacunarity
+    pub lac_frequency   : f32,
+    pub lac_amplitude   : f32,
+    pub lac_offset  : f32,
+}
+
+impl Default for NoiseParams {
+    fn default() -> Self {
+        NoiseParams {
+            size        : 10.0,
+            amplitude   : 1.0,
+            frequency   : 0.5,
+            octaves     : 6,
+            gain        : 0.5,
+            gain_frequency  : 0.0,
+            gain_amplitude  : 0.0,
+            gain_offset : 0.0,
+            lacunarity  : 2.0,
+            lac_frequency   : 2.0,
+            lac_amplitude   : 0.05,
+            lac_offset  : 1.0,
+
+        }
     }
 }

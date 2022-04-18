@@ -11,7 +11,7 @@ pub fn create_scene() -> (Vec<planet::Planet>, Vec<Node>, Vec<usize>) {
     let mut planet = planet::Planet::with_seed(498765401);
         let planet_sun = planet.planet_id;
         planet.max_height = 0.005;   // relative to scale
-        planet.noise_size = 500.0;
+        planet.noise.size = 500.0;
         planet.max_lod = 2;
         planet.has_ocean = false;
         planet.color_scheme = [
@@ -40,7 +40,7 @@ pub fn create_scene() -> (Vec<planet::Planet>, Vec<Node>, Vec<usize>) {
     let mut planet = planet::Planet::with_seed(43932);
         let planet_earth0 = planet.planet_id;
         planet.max_height = 0.03;
-        planet.noise_size = 25.0;
+        planet.noise.size = 25.0;
         planet.ocean_dark_color = glm::vec3(0.001, 0.03, 0.01);
         planet.ocean_light_color = glm::vec3(0.04, 0.37, 0.33);
         planet.emission = glm::vec3(0.03, 0.32, 0.37);
@@ -73,7 +73,11 @@ pub fn create_scene() -> (Vec<planet::Planet>, Vec<Node>, Vec<usize>) {
     let mut planet = planet::Planet::with_seed(1834327);
         let planet_earth1 = planet.planet_id;
         planet.max_height = 0.08;
-        planet.noise_size = 4.0;
+        planet.noise.size = 4.0;
+        planet.max_lod += 1;
+        planet.noise.amplitude = 0.8;
+        planet.noise.gain_amplitude = 0.8;
+        planet.noise.gain_frequency = 0.8;
         planet.emission = glm::vec3(0.02, 0.26, 0.36);
         planet.ocean_dark_color = glm::vec3(0.01, 0.06, 0.11);
         planet.ocean_light_color = glm::vec3(0.05, 0.20, 0.40);
@@ -85,7 +89,7 @@ pub fn create_scene() -> (Vec<planet::Planet>, Vec<Node>, Vec<usize>) {
             glm::vec3(0.91, 1.0, 1.0),
         ];
         planet.color_thresholds = [
-            -0.0005, 0.001, 0.014, 0.028
+            -0.0005, 0.001, 0.014, 0.024
         ];
         let mut planet_node = SceneNode::with_type(SceneNodeType::Empty);
         planet_node.planet_id = planet.planet_id;
@@ -108,7 +112,7 @@ pub fn create_scene() -> (Vec<planet::Planet>, Vec<Node>, Vec<usize>) {
         let planet_mars = planet.planet_id;
         planet.parent_id = planet_sun; // default
         planet.max_height = 0.03;
-        planet.noise_size = 10.0;
+        planet.noise.size = 10.0;
         planet.has_ocean = false;
         planet.emission = glm::vec3(0.6118, 0.1255, 0.1255);
         planet.color_scheme = [
@@ -141,7 +145,7 @@ pub fn create_scene() -> (Vec<planet::Planet>, Vec<Node>, Vec<usize>) {
     let mut planet = planet::Planet::with_seed(4329713);
         planet.parent_id = planet_mars;
         planet.max_height = 0.003;
-        planet.noise_size = 6.0;
+        planet.noise.size = 6.0;
         planet.has_ocean = false;
         planet.emission = glm::vec3(0.118, 0.1255, 0.1255);
         planet.color_scheme = [
@@ -174,7 +178,7 @@ pub fn create_scene() -> (Vec<planet::Planet>, Vec<Node>, Vec<usize>) {
     let mut planet = planet::Planet::with_seed(35462);
         planet.parent_id = planet_earth0;
         planet.max_height = 0.09;
-        planet.noise_size = 5.4;
+        planet.noise.size = 5.4;
         planet.has_ocean = false;
         planet.emission = glm::vec3(0.118, 0.1255, 0.1255);
         planet.color_scheme = [
@@ -207,7 +211,7 @@ pub fn create_scene() -> (Vec<planet::Planet>, Vec<Node>, Vec<usize>) {
     let mut planet = planet::Planet::with_seed(87635462);
         planet.parent_id = planet_earth1;
         planet.max_height = 0.12;
-        planet.noise_size = 3.4;
+        planet.noise.size = 3.4;
         planet.has_ocean = false;
         planet.emission = glm::vec3(0.118, 0.1255, 0.1255);
         planet.color_scheme = [
@@ -240,7 +244,7 @@ pub fn create_scene() -> (Vec<planet::Planet>, Vec<Node>, Vec<usize>) {
     let mut planet = planet::Planet::with_seed(192743);
         planet.parent_id = planet_earth1;
         planet.max_height = 0.09;
-        planet.noise_size = 3.6;
+        planet.noise.size = 3.6;
         planet.has_ocean = false;
         planet.emission = glm::vec3(0.118, 0.1255, 0.1255);
         planet.color_scheme = [
@@ -273,7 +277,7 @@ pub fn create_scene() -> (Vec<planet::Planet>, Vec<Node>, Vec<usize>) {
     let mut planet = planet::Planet::with_seed(12342);
         planet.parent_id = planet_earth1;
         planet.max_height = 0.04;
-        planet.noise_size = 2.7;
+        planet.noise.size = 2.7;
         planet.has_ocean = false;
         planet.emission = glm::vec3(0.118, 0.1255, 0.1255);
         planet.color_scheme = [
@@ -306,7 +310,7 @@ pub fn create_scene() -> (Vec<planet::Planet>, Vec<Node>, Vec<usize>) {
     let mut planet = planet::Planet::with_seed(71772);
         planet.parent_id = planet_sun;
         planet.max_height = 0.02;
-        planet.noise_size = 8.2;
+        planet.noise.size = 8.2;
         planet.has_ocean = false;
         planet.emission = glm::vec3(0.0941, 0.1922, 0.5216);
         planet.color_scheme = [
@@ -339,7 +343,7 @@ pub fn create_scene() -> (Vec<planet::Planet>, Vec<Node>, Vec<usize>) {
     let mut planet = planet::Planet::with_seed(98732);
         planet.parent_id = planet_sun;
         planet.max_height = 0.023;
-        planet.noise_size = 6.7;
+        planet.noise.size = 6.7;
         planet.has_ocean = true;
         planet.ocean_dark_color = glm::vec3(0.20, 0.06, 0.0);
         planet.ocean_light_color = glm::vec3(0.70, 0.61, 0.17);
@@ -374,7 +378,15 @@ pub fn create_scene() -> (Vec<planet::Planet>, Vec<Node>, Vec<usize>) {
     let mut planet = planet::Planet::with_seed(87546432);
         planet.parent_id = planet_sun;
         planet.max_height = 0.08;
-        planet.noise_size = 4.0;
+        planet.noise.size = 4.0;
+        planet.noise.amplitude = 1.0;
+        planet.noise.gain = 0.5;
+        planet.noise.gain_amplitude = 0.25;
+        planet.noise.gain_frequency = 0.6;
+        planet.noise.gain_offset = 0.1;
+        planet.noise.lac_offset = 0.5;
+        planet.noise.lac_amplitude = 0.5;
+        planet.noise.lac_frequency = 0.4;
         planet.emission = glm::vec3(0.4588, 0.6588, 0.4588);
         planet.ocean_dark_color = glm::vec3(0.06, 0.06, 0.11);
         planet.ocean_light_color = glm::vec3(0.15, 0.14, 0.40);
