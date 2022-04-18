@@ -94,7 +94,7 @@ fn main() {
             println!("OpenGL\t: {}", util::get_gl_string(gl::VERSION));
             println!("GLSL\t: {}", util::get_gl_string(gl::SHADING_LANGUAGE_VERSION));
         }
-        gamelogic::render(mouse_delta, pressed_keys, context);
+        gamelogic::game(mouse_delta, pressed_keys, context);
     });
 
     //-------------------------------------------------------------------------/

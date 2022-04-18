@@ -19,7 +19,7 @@ const POLYMODES: [u32;3] = [gl::FILL, gl::POINT, gl::LINE];
 
 
 /// Initializes game ad runs main game loop
-pub fn render(
+pub fn game(
     mouse_delta: Arc<Mutex<(f32, f32)>>, 
     pressed_keys: Arc<Mutex<Vec<VirtualKeyCode>>>,
     context: glutin::ContextWrapper<glutin::PossiblyCurrent, glutin::window::Window>
