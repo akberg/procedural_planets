@@ -26,12 +26,21 @@ The project is written in [Rust](https://rust-lang.org) and requires Cargo. Run 
 ## Behind the scene
 
 ![Generate a cubesphere, vertices should be quite evenly distributed](report/images/cubesphere-wf.png)
+
 The cubesphere. Not perfect, but well suited for my usecase.
+
 ![Computed normals, but struggling with seams](report/images/cubesphere-w-noise-normal-seam.png)
+
 Adding noise to the sphere makes the foundation for a planet.
+
 ![Apply noise and add an additional sphere as an ocean](report/images/red-planet-w-ocean.png)
+
 An extra, low-poly sphere does the job as an ocean.
+
 ![Playing with adding a height dependent colour map](report/images/planet-w-cheated-heightmap.png)
+
 Adding height dependent colour scheme.
+
 ![LoD, though buggy, is making progress](report/images/lod-wireframes.png)
+
 The varying detail level is shown clearly in wireframe mode.
