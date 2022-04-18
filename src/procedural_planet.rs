@@ -2,7 +2,6 @@ use nalgebra_glm as glm;
 use crate::scene_graph::{self, SceneNodeType};
 use crate::{mesh, shader::Shader};
 use std::sync::atomic::{AtomicU64, Ordering};
-use lazy_static::lazy_static;
 
 use crate::globals::*;
 use crate::util;
