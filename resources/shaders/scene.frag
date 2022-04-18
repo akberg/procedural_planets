@@ -30,7 +30,7 @@ uniform bool u_has_texture;
 #define N_LAYERS 5
 
 // Array of planets
-#define MAX_PLANETS 64
+#define MAX_PLANETS 32
 uniform uint u_planets_len;
 uniform struct Planet {
     uint planet_id;     // Unique ID for each planet
@@ -245,12 +245,20 @@ vec4 phong_light(
         // TODO: Give lightsource a radius
         // TODO: Soft shadow, let light bend around objects
         float a = 1.0;
-        for (int i = 0; i < u_planets_len; i++) {
+        vec3 occluder;
+        float occluder_radius;
+        float light_radius=u_planets[light_id].radius;
+        for (int i = 0; i < u_planets_len+1; i++) {
             if (i == u_current_planet_id) continue;
             
-            vec3 occluder=u_planets[i].position;
-            float occluder_radius=u_planets[i].radius;
-            float light_radius=u_planets[light_id].radius;
+            if (i < u_planets_len) {
+                occluder=u_planets[i].position;
+                occluder_radius=u_planets[i].radius;
+            }
+            else {
+                occluder = u_player_position;
+                occluder_radius = 0.1;
+            }
             
             vec3 v0 = light_dir;
             vec3 v1 = occluder - position;
