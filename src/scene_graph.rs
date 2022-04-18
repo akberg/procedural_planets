@@ -262,7 +262,7 @@ impl SceneNode {
         Ocean |
         Skybox => {
             if self.index_count != -1 && (!matches!(self.node_type, Ocean | Planet) 
-            || (self.distance >= clipping.0 || self.distance < clipping.0)) {
+            || (self.distance >= clipping.0 || self.distance < 10.0 * clipping.0)) {
 
                 gl::BindVertexArray(self.vao.vao);
             
