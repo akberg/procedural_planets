@@ -6,6 +6,7 @@ subtitle: TDT4230 Final project
 author: Andreas Klavenes Berg
 date: \today
 toc: false
+geometry: "margin=3cm,top=2cm,bottom=2.3cm"
 ---
 
 # Project description
@@ -30,13 +31,13 @@ Projecting the vertices onto a sphere required some fancy math. One could simply
 
 ## Noise
 
-For terrain generation, I used the `noise` crate[^noise-rs], which provides a powerfull toolbox for noise generation. I ended up only using its Perlin generator, but it has potensial for more sophisticated application.
+For terrain generation, I used the `noise` crate[^noise-rs], which provides a powerfull toolbox for noise generation. I ended up only using its seedable Perlin generator, but it has potensial for more sophisticated application. As a start, I made only a fractal noise – also known as fractal Brownian Motion[^fBM] – and made all parameters modifiable in the function `Planet::noise`.
 
-## Level of Detail
+## LoD of the rings (Level of Detail)
 
-The main technical goal of the project was to explore Level of Detail techniques, methods of focusing the detail level and the computational capacity where it matters. Initially, I tried an approach of rendering only the mesh of the closest planet, rendering the rest as implicit geometry[^cognite] on the skybox. However, this would require duplicating the noise function used on the CPU side in order to properly display other planets. I abandoned the pure idea, but kept the projection of faded, coloured dots as a lowest level of detail, when a planet is so far away one cannot distinguish any detail anyway. The fading also doubles as a glowing halo of an atmosphere for the rendered planets.
+The main technical goal of the project was to explore Level of Detail (LoD, not an acronym for Lots of Ducks in this case) techniques, methods of focusing the detail level and the computational capacity where it matters. Initially, I tried an approach of rendering only the mesh of the closest planet, rendering the rest as implicit geometry[^cognite] on the skybox. However, this would require duplicating the noise function used on the CPU side in order to properly display other planets. I abandoned the pure idea, but kept the projection of faded, coloured dots as a lowest level of detail, when a planet is so far away one cannot distinguish any detail anyway. The fading also doubles as a glowing halo of an atmosphere for the rendered planets.
 
-The main LoD technique used is the subdivision of the cubesphere sides, generating stepwise higher resolution terrains. Scene graphs nodes are arranged under the planet root in a quad tree for each side, where all rendered planets start with some 16 subdivisions on each plane. A LoD function traverses the tree and selects the requested level based on the player's distance from the planet and the angle to the segment's normal. If a node satisfies the conditions for increasing the LoD but the child nodes and higher resolution meshes don't exist yet, they are generated and added to the tree. In order to limit the tree depth and the number of draw calls, the number of subdivisions increase for each new level, in addition to there being four planes in place of one.
+The main LoD technique used is the subdivision of the cubesphere sides, generating stepwise higher resolution terrains. Scene graphs nodes are arranged under the planet root in a quad tree for each side, where all rendered planets start with some 16 subdivisions on each plane. A function, `Planet::lod_terrain`, traverses the tree and selects the requested level based on the player's distance from the planet and the angle to the segment's normal. If a node satisfies the conditions for increasing the LoD but the child nodes and higher resolution meshes don't exist yet, they are generated and added to the tree. In order to limit the tree depth and the number of draw calls, the number of subdivisions increase for each new level, in addition to there being four planes in place of one.
 
 ### Fearless concurrency – they say
 
@@ -69,11 +70,19 @@ Floating points will give the best precision close to zero, so a solution to the
 
 When returning to free-float state, the scene is scaled back down, and planet positions are computed from the sun as origin again. Though, the scene is not moved back to return the sun to the middle, this is a personacentric system ... or something. The floating point precision was perhaps the greatest challenge of the project.
 
+# What more
+
+I started out with a longer TODO-list than I though I would be able to complete, and it grew throughout the project. For the lighting on the planets an interesting challenge would be reflecting sunlight in the atmosphere, and render the sky lighter when the sun is up, seen from the ground. The ground texture is also quite uninteresting. I thought of adding some patterns in the shader, from which the colour scheme could be extended to select one to blend with the colour. Some trees, rocks etc. could have been added by working with particles, and while loading meshes from files, the player could be accompagned by a spaceship model. For planetary trajectories, rotation is still missing, so all planets have a constant orientation – or their rotation speed is equal to their trajectory speed. 
+
+On performance, my current design quickly runs out of registers, using too many uniforms and thus bandwidth for mostly constant planet information. In order to actually be able to spawn endless planets, I would need to pass some of the information through a shader storage buffer[^ssbo].
+
 
 [^lague]: https://www.youtube.com/watch?v=lctXaT9pxA0&t=512s
 [^cubesphere]: https://catlikecoding.com/unity/tutorials/cube-sphere/
 [^clipping]: https://community.khronos.org/t/near-and-far-clipping-ratios/32439/3
 [^cognite]: Taking inspiration from the Cognite guest lecture about the topic.
+[^fBM]: https://thebookofshaders.com/13/
 [^noise-rs]: https://crates.io/crates/noise
-[^stars]: https://www.overdraw.xyz/blog/2018/7/17/using-cellular-noise-to-generate-procedural-stars
 [^skybox]: https://learnopengl.com/Advanced-OpenGL/Cubemaps
+[^ssbo]: https://www.khronos.org/opengl/wiki/Shader_Storage_Buffer_Object
+[^stars]: https://www.overdraw.xyz/blog/2018/7/17/using-cellular-noise-to-generate-procedural-stars
