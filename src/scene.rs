@@ -75,9 +75,11 @@ pub fn create_scene() -> (Vec<planet::Planet>, Vec<Node>, Vec<usize>) {
         planet.max_height = 0.08;
         planet.noise.size = 4.0;
         planet.max_lod += 1;
+        planet.noise.octaves += 1;
         planet.noise.amplitude = 0.8;
-        planet.noise.gain_amplitude = 0.8;
-        planet.noise.gain_frequency = 0.8;
+        planet.noise.gain_amplitude = 0.7;
+        planet.noise.gain_frequency = 15.3;
+        planet.noise.gain_offset = -0.4;
         planet.emission = glm::vec3(0.02, 0.26, 0.36);
         planet.ocean_dark_color = glm::vec3(0.01, 0.06, 0.11);
         planet.ocean_light_color = glm::vec3(0.05, 0.20, 0.40);
