@@ -571,7 +571,7 @@ pub fn game(
             //-----------------------------------------------------------------/
             // Draw skybox
             //-----------------------------------------------------------------/
-            gl::DepthFunc(gl::EQUAL);
+            gl::DepthFunc(gl::LEQUAL);
             skybox_node.update_node_transformations(&glm::identity(), &player.position);
             skybox_node.draw_scene(&perspective_view, &sh, (0.1, 10.0));
             gl::DepthFunc(gl::LESS);
