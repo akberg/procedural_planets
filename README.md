@@ -4,7 +4,9 @@ Final project in TDT4230 Graphics and visualization. Procedurally generated plan
 
 ### Running
 
-The project is written in [Rust](https://rust-lang.org) and requires Cargo. Run with `cargo run`
+The project is written in [Rust](https://rust-lang.org) and requires Cargo. Run with `cargo run`.
+
+Some configurations can be adjusted without recompiling in the `settings.conf` file. The scene is constructed in `scene.rs`, and planets parameters can be configured there.
 
 ### Controls
 
