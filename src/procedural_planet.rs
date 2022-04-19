@@ -55,17 +55,20 @@ pub static IN_FLIGHT: AtomicU64 = AtomicU64::new(0);
 ///         +---bottom
 #[derive(Default, Debug, Copy, Clone)]
 pub struct Planet {
-    pub node        : usize,// scene node kept separate
+    pub node        : usize,            // scene node kept separate
     pub planet_id   : usize,
-    pub parts       : usize,    // Number of meshes
-    pub position    : glm::TVec3<f32>,  // Handled by scene node
-    pub rotation    : glm::TVec3<f32>,  // Handled by scene node
+    pub parts       : usize,            // Number of meshes
+    pub position    : glm::Vec3,        // Handled by scene node
+    pub rotation    : glm::Vec3,        // Handled by scene node
     pub radius      : f32,              // Radius to ocean level
     // Physics
     pub gravity     : f32,              // Gravitational pull, for physics
     pub trajectory  : f32,              // Radius of trajectory
-    pub traj_speed  : f32,              // Trajectory speed
-    pub init_angle  : glm::TVec3<f32>,
+    pub traj_speed  : f32,              // Angle speed of trajectory
+    pub traj_init_angle : glm::Vec3,    // Inital trajectory position
+    pub rot_speed   : f32,              // Angle speed of rotaion
+    pub rot_axis    : glm::Vec3,        // Axis around which the planet rotates
+    pub rot_init_angle : f32,           // Initial rotation
     pub parent_id   : usize,
     // Lighting
     pub lightsource : bool,
@@ -86,7 +89,7 @@ pub struct Planet {
 
     pub noise_fn    : u32,
     pub seed        : u32,
-    //pub noise_size  : f32,
+    // Some independent generators for increased variation
     pub noise       : NoiseParams,
     perlin0         : noise::Perlin,
     perlin1         : noise::Perlin,
@@ -106,6 +109,7 @@ impl Planet {
             radius      : 1.0,
             gravity     : 0.5,
             traj_speed  : 0.01,
+            rot_axis    : glm::vec3(0.0, 1.0, 0.0),
             planet_id,
             emission    : glm::vec3(1.0, 1.0, 0.0),
             lightsource : false,

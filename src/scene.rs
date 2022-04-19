@@ -57,13 +57,13 @@ pub fn create_scene() -> (Vec<planet::Planet>, Vec<Node>, Vec<usize>) {
         let mut planet_node = SceneNode::with_type(SceneNodeType::Empty);
         planet_node.planet_id = planet.planet_id;
         planet_node.scale *= 23.0;
-        planet.trajectory = 970.0;
+        planet.trajectory = 1120.0;
         planet.traj_speed = 0.012;
-        planet.init_angle = glm::vec3(6.24f32, 0.5, 1.0f32);
+        planet.traj_init_angle = glm::vec3(6.24f32, 0.5, 1.0f32);
         planet_node.position = glm::vec3(
-            planet.init_angle.x.sin() * planet.trajectory, 
-            planet.init_angle.y, 
-            planet.init_angle.x.cos() * planet.trajectory
+            planet.traj_init_angle.x.sin() * planet.trajectory, 
+            planet.traj_init_angle.y, 
+            planet.traj_init_angle.x.cos() * planet.trajectory
         );
         planet.node = planet_node.node_id;
         planets.push(planet);
@@ -94,13 +94,13 @@ pub fn create_scene() -> (Vec<planet::Planet>, Vec<Node>, Vec<usize>) {
         let mut planet_node = SceneNode::with_type(SceneNodeType::Empty);
         planet_node.planet_id = planet.planet_id;
         planet_node.scale *= 16.0;
-        planet.trajectory = 650.0;
+        planet.trajectory = 690.0;
         planet.traj_speed = 0.03;
-        planet.init_angle = glm::vec3(0.08f32, 0.3, 1.0);
+        planet.traj_init_angle = glm::vec3(0.08f32, 0.3, 1.0);
         planet_node.position = glm::vec3(
-            planet.init_angle.x.sin() * planet.trajectory, 
-            planet.init_angle.y, 
-            planet.init_angle.x.cos() * planet.trajectory
+            planet.traj_init_angle.x.sin() * planet.trajectory, 
+            planet.traj_init_angle.y, 
+            planet.traj_init_angle.x.cos() * planet.trajectory
         );
         planet.node = planet_node.node_id;
         planet.node = planet_node.node_id;
@@ -128,13 +128,15 @@ pub fn create_scene() -> (Vec<planet::Planet>, Vec<Node>, Vec<usize>) {
         let mut planet_node = SceneNode::with_type(SceneNodeType::Empty);
         planet_node.planet_id = planet.planet_id;
         planet_node.scale *= 15.3;
-        planet.trajectory = 440.0;
-        planet.init_angle = glm::vec3(6.24, 0.1, 1.0);
+        planet.trajectory = 460.0;
+        planet.traj_init_angle = glm::vec3(6.24, 0.1, 1.0);
         planet_node.position = glm::vec3(
-            planet.init_angle.x.sin() * planet.trajectory, 
-            planet.init_angle.y, 
-            planet.init_angle.x.cos() * planet.trajectory
+            planet.traj_init_angle.x.sin() * planet.trajectory, 
+            planet.traj_init_angle.y, 
+            planet.traj_init_angle.x.cos() * planet.trajectory
         );
+        planet.rot_speed = 2.0;
+        planet.rot_axis = glm::normalize(&glm::vec3(1.0, 4.0, 0.0));
         eprintln!("Mars is {} away from the sun", glm::length(&planet_node.position));
         planet.node = planet_node.node_id;
         planet.node = planet_node.node_id;
@@ -158,16 +160,16 @@ pub fn create_scene() -> (Vec<planet::Planet>, Vec<Node>, Vec<usize>) {
         planet.color_thresholds = [
             -0.0005, 0.001, 0.014, 0.026
         ];
-        planet.init_angle = glm::vec3(0.02, 0.0, 1.0);
+        planet.traj_init_angle = glm::vec3(0.02, 0.0, 1.0);
         let mut planet_node = SceneNode::with_type(SceneNodeType::Empty);
         planet_node.planet_id = planet.planet_id;
         planet_node.scale *= 4.0;
         planet.trajectory = 50.0;
         planet.traj_speed = 0.8;
         planet_node.position = planet_nodes[2].position + glm::vec3(
-            planet.init_angle.x.sin() * planet.trajectory, 
-            planet.init_angle.y, 
-            planet.init_angle.x.cos() * planet.trajectory
+            planet.traj_init_angle.x.sin() * planet.trajectory, 
+            planet.traj_init_angle.y, 
+            planet.traj_init_angle.x.cos() * planet.trajectory
         );
         planet.node = planet_node.node_id;
         planet.node = planet_node.node_id;
@@ -191,16 +193,16 @@ pub fn create_scene() -> (Vec<planet::Planet>, Vec<Node>, Vec<usize>) {
         planet.color_thresholds = [
             -0.0005, 0.001, 0.014, 0.026
         ];
-        planet.init_angle = glm::vec3(0.7, 0.0, 1.0);
+        planet.traj_init_angle = glm::vec3(0.7, 0.0, 1.0);
         let mut planet_node = SceneNode::with_type(SceneNodeType::Empty);
         planet_node.planet_id = planet.planet_id;
         planet_node.scale *= 4.4;
         planet.trajectory = 48.0;
         planet.traj_speed = 0.8;
         planet_node.position = planet_nodes[1].position + glm::vec3(
-            planet.init_angle.x.sin() * planet.trajectory, 
-            planet.init_angle.y, 
-            planet.init_angle.x.cos() * planet.trajectory
+            planet.traj_init_angle.x.sin() * planet.trajectory, 
+            planet.traj_init_angle.y, 
+            planet.traj_init_angle.x.cos() * planet.trajectory
         );
         planet.node = planet_node.node_id;
         planet.node = planet_node.node_id;
@@ -224,16 +226,16 @@ pub fn create_scene() -> (Vec<planet::Planet>, Vec<Node>, Vec<usize>) {
         planet.color_thresholds = [
             -0.0005, 0.001, 0.014, 0.026
         ];
-        planet.init_angle = glm::vec3(3.13, 0.0, 3.7);
+        planet.traj_init_angle = glm::vec3(3.13, 0.0, 3.7);
         let mut planet_node = SceneNode::with_type(SceneNodeType::Empty);
         planet_node.planet_id = planet.planet_id;
         planet_node.scale *= 4.8;
-        planet.trajectory = 64.0;
+        planet.trajectory = 72.0;
         planet.traj_speed = 0.8;
         planet_node.position = planet_nodes[0].position + glm::vec3(
-            planet.init_angle.x.sin() * planet.trajectory, 
-            planet.init_angle.y, 
-            planet.init_angle.x.cos() * planet.trajectory
+            planet.traj_init_angle.x.sin() * planet.trajectory, 
+            planet.traj_init_angle.y, 
+            planet.traj_init_angle.x.cos() * planet.trajectory
         );
         planet.node = planet_node.node_id;
         planet.node = planet_node.node_id;
@@ -257,16 +259,16 @@ pub fn create_scene() -> (Vec<planet::Planet>, Vec<Node>, Vec<usize>) {
         planet.color_thresholds = [
             -0.0005, 0.001, 0.014, 0.026
         ];
-        planet.init_angle = glm::vec3(0.46, 0.0, 2.2);
+        planet.traj_init_angle = glm::vec3(0.46, 0.0, 2.2);
         let mut planet_node = SceneNode::with_type(SceneNodeType::Empty);
         planet_node.planet_id = planet.planet_id;
         planet_node.scale *= 3.1;
         planet.trajectory = 48.0;
         planet.traj_speed = 0.8;
         planet_node.position = planet_nodes[0].position + glm::vec3(
-            planet.init_angle.x.sin() * planet.trajectory, 
-            planet.init_angle.y, 
-            planet.init_angle.x.cos() * planet.trajectory
+            planet.traj_init_angle.x.sin() * planet.trajectory, 
+            planet.traj_init_angle.y, 
+            planet.traj_init_angle.x.cos() * planet.trajectory
         );
         planet.node = planet_node.node_id;
         planet.node = planet_node.node_id;
@@ -290,16 +292,16 @@ pub fn create_scene() -> (Vec<planet::Planet>, Vec<Node>, Vec<usize>) {
         planet.color_thresholds = [
             -0.0005, 0.001, 0.014, 0.026
         ];
-        planet.init_angle = glm::vec3(3.80, 0.0, 2.8);
+        planet.traj_init_angle = glm::vec3(3.80, 0.0, 2.8);
         let mut planet_node = SceneNode::with_type(SceneNodeType::Empty);
         planet_node.planet_id = planet.planet_id;
         planet_node.scale *= 3.9;
         planet.trajectory = 36.0;
         planet.traj_speed = 0.8;
         planet_node.position = planet_nodes[0].position + glm::vec3(
-            planet.init_angle.x.sin() * planet.trajectory, 
-            planet.init_angle.y, 
-            planet.init_angle.x.cos() * planet.trajectory
+            planet.traj_init_angle.x.sin() * planet.trajectory, 
+            planet.traj_init_angle.y, 
+            planet.traj_init_angle.x.cos() * planet.trajectory
         );
         planet.node = planet_node.node_id;
         planet.node = planet_node.node_id;
@@ -328,11 +330,11 @@ pub fn create_scene() -> (Vec<planet::Planet>, Vec<Node>, Vec<usize>) {
         planet_node.scale *= 13.5;
         planet.trajectory = 1690.0;
         planet.traj_speed = 0.1;
-        planet.init_angle = glm::vec3(-6.22, 1.1, 3.5);
+        planet.traj_init_angle = glm::vec3(-6.22, 1.1, 3.5);
         planet_node.position = glm::vec3(
-            planet.init_angle.x.sin() * planet.trajectory, 
-            planet.init_angle.y, 
-            planet.init_angle.x.cos() * planet.trajectory
+            planet.traj_init_angle.x.sin() * planet.trajectory, 
+            planet.traj_init_angle.y, 
+            planet.traj_init_angle.x.cos() * planet.trajectory
         );
         planet.node = planet_node.node_id;
         planet.node = planet_node.node_id;
@@ -363,11 +365,11 @@ pub fn create_scene() -> (Vec<planet::Planet>, Vec<Node>, Vec<usize>) {
         planet_node.scale *= 10.0;
         planet.trajectory = 190.0;
         planet.traj_speed = 0.1;
-        planet.init_angle = glm::vec3(6.20, 1.1, 3.4);
+        planet.traj_init_angle = glm::vec3(6.20, 1.1, 3.4);
         planet_node.position = glm::vec3(
-            planet.init_angle.x.sin() * planet.trajectory, 
-            planet.init_angle.y, 
-            planet.init_angle.x.cos() * planet.trajectory
+            planet.traj_init_angle.x.sin() * planet.trajectory, 
+            planet.traj_init_angle.y, 
+            planet.traj_init_angle.x.cos() * planet.trajectory
         );
         planet.node = planet_node.node_id;
         planet.node = planet_node.node_id;
@@ -403,13 +405,14 @@ pub fn create_scene() -> (Vec<planet::Planet>, Vec<Node>, Vec<usize>) {
         let mut planet_node = SceneNode::with_type(SceneNodeType::Empty);
         planet_node.planet_id = planet.planet_id;
         planet_node.scale *= 46.0;
-        planet.trajectory = 1250.0;
+        planet.trajectory = 1450.0;
         planet.traj_speed = 0.03;
-        planet.init_angle = glm::vec3(0.08f32, 0.3, 2.3);
+        planet.traj_init_angle = glm::vec3(0.08f32, 0.3, 2.3);
+        planet.rot_speed = 2.4;
         planet_node.position = glm::vec3(
-            planet.init_angle.x.sin() * planet.trajectory, 
-            planet.init_angle.y, 
-            planet.init_angle.x.cos() * planet.trajectory
+            planet.traj_init_angle.x.sin() * planet.trajectory, 
+            planet.traj_init_angle.y, 
+            planet.traj_init_angle.x.cos() * planet.trajectory
         );
         planet.node = planet_node.node_id;
         planet.node = planet_node.node_id;

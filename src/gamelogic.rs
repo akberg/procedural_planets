@@ -258,19 +258,29 @@ pub fn game(
             // Reverse origin if player is anchored, origin of scene at center of closest planet
             let mut idx = player.closest_planet_id as usize;
             computed.push(idx);
-            planet_nodes[idx].position = glm::vec3(0.0, 0.0, 0.0);
-            planets[idx].position = glm::vec3(0.0, 0.0, 0.0);
+            planet_nodes[idx].position = glm::zero();
+            planets[idx].position = glm::zero();
+            planet_nodes[idx].rotation = glm::zero();
 
             while planets[idx].planet_id != planets[idx].parent_id {
                 let idx_next = planets[idx].parent_id;
                 computed.push(idx_next);
-
-                planet_nodes[idx_next].position = planets[idx].position - glm::vec3(
-                    (planets[idx].traj_speed * WORLD_SPEED * elapsed + planets[idx].init_angle.x).sin() * planets[idx].trajectory,
-                    planets[idx].init_angle.y, 
-                    (planets[idx].traj_speed * WORLD_SPEED * elapsed + planets[idx].init_angle.x).cos() * planets[idx].trajectory, 
+                let angle = planets[idx].traj_speed * WORLD_SPEED * elapsed + planets[idx].traj_init_angle.x;
+                let traj_position = glm::vec3(
+                    (angle).sin() * planets[idx].trajectory,
+                    planets[idx].traj_init_angle.y, 
+                    (angle).cos() * planets[idx].trajectory, 
                 );
+                // let rotation = planets[idx].rot_speed * WORLD_SPEED * elapsed + planets[idx].rot_init_angle;
+                // let rotation_vec = planet_nodes[idx].rotation + rotation * planets[idx].rot_axis;
+                planet_nodes[idx_next].position = planets[idx].position - traj_position;
+                    // - glm::rotate_vec3(
+                    //     &traj_position,
+                    //     -rotation,
+                    //     &planets[idx].rot_axis
+                    // );
                 planets[idx_next].position = planet_nodes[idx_next].position;
+                // planet_nodes[idx_next].rotation = -rotation_vec;
                 idx = idx_next;
             }
         }
@@ -289,14 +299,38 @@ pub fn game(
         // Planet trajectories, skip any that have already been computed
         // Skip 0 because sun is either origin or computed beforehand
         for i in (1..planets.len()).filter(|i| !computed.contains(i)) {
+            // Origin of trajectory
             let origin = planet_nodes[planets[i].parent_id].position;
+            // Angle of position to inital position
+            let angle = planets[i].traj_speed * WORLD_SPEED * elapsed
+                + planets[i].traj_init_angle.x;
+            // planet_nodes[i].rotation: angle rotation around each axis
+            // // Parent's rotation
+            // let parent_rotation = planets[planets[i].parent_id].rot_speed * WORLD_SPEED * elapsed
+            //     + planets[planets[i].parent_id].rot_init_angle;
 
-            planet_nodes[i].position = origin + glm::vec3(
-                (planets[i].traj_speed * WORLD_SPEED * elapsed + planets[i].init_angle.x).sin() * planets[i].trajectory,
-                planets[i].init_angle.y, 
-                (planets[i].traj_speed * WORLD_SPEED * elapsed + planets[i].init_angle.x).cos() * planets[i].trajectory, 
+            // Trajectory position relative to parent
+            let traj_position = glm::vec3(
+                (angle).sin() * planets[i].trajectory,
+                planets[i].traj_init_angle.y, 
+                (angle).cos() * planets[i].trajectory, 
             );
+
+            // Rotate back and add origin to get global position
+            // - or keep relative rotation as a feature?
+            planet_nodes[i].position = origin + traj_position;
+                // + glm::rotate_vec3(
+                //     &traj_position, 
+                //     parent_rotation, 
+                //     &-planets[planets[i].parent_id].rot_axis
+                // );
             planets[i].position = planet_nodes[i].position;
+
+            // // Planet rotation
+            // let rotation = planets[i].rot_speed * WORLD_SPEED * elapsed
+            //     + planets[i].rot_init_angle;
+            // let rotation_vec = planet_nodes[planets[i].parent_id].rotation + rotation * planets[i].rot_axis;
+            // planet_nodes[i].rotation = rotation_vec;
         }
 
         //---------------------------------------------------------------------/
