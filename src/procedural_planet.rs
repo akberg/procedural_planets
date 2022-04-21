@@ -417,7 +417,7 @@ impl Planet {
                 let gain = params.gain 
                     + params.gain_amplitude * (
                         self.perlin2.get(
-                            [pos.x.into(), pos.y.into(), pos.z.into()]
+                            [gain_pos.x.into(), gain_pos.y.into(), gain_pos.z.into()]
                         ) as f32 + params.gain_offset
                     );
                 let lac_pos = pos * params.lac_frequency;
