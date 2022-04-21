@@ -284,7 +284,7 @@ impl Planet {
         // cos of angle between player position and plane center
         let dot = glm::dot(&plane_normal, &glm::normalize(&player_normal));
         let angle = dot.acos();
-        let angle_lim = std::f32::consts::FRAC_PI_2 * 1.5 / (level as f32 + 1.0).powf(1.5);
+        let angle_lim = std::f32::consts::FRAC_PI_2 * 1.6 / (level as f32 + 1.0).powf(1.4);
         
         // Use height to limit LoD when planet is further away
         let player_height = glm::length(&(player_position - self.position));
