@@ -91,9 +91,7 @@ pub struct Planet {
     pub seed        : u32,
     // Some independent generators for increased variation
     pub noise       : NoiseParams,
-    perlin0         : noise::Perlin,
-    perlin1         : noise::Perlin,
-    perlin2         : noise::Perlin,
+    perlin          : noise::Perlin,
 }
 
 use noise::*;
@@ -119,9 +117,7 @@ impl Planet {
             ocean_dark_color    : glm::vec3(0.01, 0.2, 0.3),
             ocean_light_color   : glm::vec3(0.04, 0.3, 0.43),
             noise_fn    : 0,
-            perlin0     : noise::Perlin::new().set_seed(seed),
-            perlin1     : noise::Perlin::new().set_seed(seed*seed),
-            perlin2     : noise::Perlin::new().set_seed(seed*seed/2),
+            perlin      : noise::Perlin::new().set_seed(seed),
             seed,
             //noise_size  : 10.0,
 
@@ -416,14 +412,14 @@ impl Planet {
                 let gain_pos = pos * params.gain_frequency;
                 let gain = params.gain 
                     + params.gain_amplitude * (
-                        self.perlin2.get(
+                        self.perlin.get(
                             [gain_pos.x.into(), gain_pos.y.into(), gain_pos.z.into()]
                         ) as f32 + params.gain_offset
                     );
                 let lac_pos = pos * params.lac_frequency;
                 let lacunarity = params.lacunarity 
                     + params.lac_amplitude * (
-                        self.perlin1.get(
+                        self.perlin.get(
                             [lac_pos.x.into(), lac_pos.y.into(), lac_pos.z.into()]
                         ) as f32 + params.lac_offset
                     );
@@ -431,7 +427,7 @@ impl Planet {
                 // Iterations - or octaves
                 for _ in 0..params.octaves {
                     let point = pos * freq;
-                    noise_sum += self.perlin0.get([
+                    noise_sum += self.perlin.get([
                         (point.x * self.noise.size) as f64, // + seed as f64,
                         (point.y * self.noise.size) as f64, // + seed as f64,
                         (point.z * self.noise.size) as f64, // + seed as f64,
