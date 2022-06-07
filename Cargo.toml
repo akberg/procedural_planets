@@ -1,7 +1,8 @@
 [package]
-name = "grafvis_tdt4230_final_project"
+name = "procedural-planets"
 version = "0.1.0"
-edition = "2018"
+author = ["Andreas K. Berg <andreaskb98@gmail.com>"]
+edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -9,7 +10,7 @@ edition = "2018"
 glutin = "0.28.0"
 gl = "0.14.0"
 
-nalgebra-glm = "0.16.0"
+nalgebra-glm = "0.17.0"
 tobj = "3.2.1"
 image = "0.24.1"
 
