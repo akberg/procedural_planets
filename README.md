@@ -85,3 +85,7 @@ The varying detail level is shown clearly in wireframe mode.
     * Consider adding a crosshair to emphasize moving direction
     * Give planets names and display it when pointing at them, also show distance to the planet.
     * Improve the GUI layout (although it's mostly for debugging), maybe create a new layout for normal playing, not displaying information just needed for debugging.
+* Extract general elements to an improved project baseline.
+    * mesh module
+* Mesh: merge meshes
+* Do scene graph elements as a trait instead of a single struct
