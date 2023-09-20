@@ -29,8 +29,16 @@ pub type Node = ManuallyDrop<Pin<Box<SceneNode>>>;
 // }
 
 #[derive(Copy, Clone, Debug)]
-pub enum VAOStatus { NotStarted, Generating, Ready }
-impl Default for VAOStatus { fn default() -> Self { VAOStatus::NotStarted } }
+pub enum VAOStatus {
+    NotStarted,
+    Generating,
+    Ready,
+}
+impl Default for VAOStatus {
+    fn default() -> Self {
+        VAOStatus::NotStarted
+    }
+}
 
 // pub struct LightSource {
 //     pub color: glm::TVec3<f32>,
@@ -49,7 +57,7 @@ impl Default for VAOStatus { fn default() -> Self { VAOStatus::NotStarted } }
 
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub enum SceneNodeType {
-    Geometry = 0,   // Unused   
+    Geometry = 0,   // Unused
     Skybox = 1,     // Skybox shader
     Geometry2d = 2, // For gui
     Planet = 3,     // Planet terrain shader
@@ -59,86 +67,85 @@ pub enum SceneNodeType {
 }
 
 pub struct SceneNode {
-    pub node_id         : usize,
-    pub planet_id       : usize,        // Used if node belongs to a planet
-    pub position        : glm::Vec3,   // Where I am in relation to my parent
-    pub rotation        : glm::Vec3,   // How I should be rotated
-    pub scale           : glm::Vec3,   // How I should be scaled
-    pub reference_point : glm::Vec3,   // About which point I shall rotate about
+    pub node_id: usize,
+    pub planet_id: usize,           // Used if node belongs to a planet
+    pub position: glm::Vec3,        // Where I am in relation to my parent
+    pub rotation: glm::Vec3,        // How I should be rotated
+    pub scale: glm::Vec3,           // How I should be scaled
+    pub reference_point: glm::Vec3, // About which point I shall rotate about
 
-    pub node_type   : SceneNodeType,
-    pub name        : String,
+    pub node_type: SceneNodeType,
+    pub name: String,
     pub current_transformation_matrix: glm::Mat4, // The fruits of my labor
-    pub distance    : f32,  // Distance to player
+    pub distance: f32,                            // Distance to player
 
-    pub vao         : mesh::VAOobj,             // What I should draw
-    pub index_count : i32,             // How much of it I shall draw
+    pub vao: mesh::VAOobj,                                 // What I should draw
+    pub index_count: i32,                                  // How much of it I shall draw
     pub vao_generate: Arc<Mutex<(VAOStatus, mesh::Mesh)>>, // False if not ready
 
     // IDs of maps
-    pub texture_id  : Option<u32>,
+    pub texture_id: Option<u32>,
 
     pub children: Vec<*mut SceneNode>, // Those I command
 }
 
 impl SceneNode {
-
     pub fn new() -> Node {
         ManuallyDrop::new(Pin::new(Box::new(SceneNode {
             node_id: NODE_COUNTER.fetch_add(1, Ordering::Relaxed) as usize,
-            planet_id       : 0,
-            position        : glm::zero(),
-            rotation        : glm::zero(),
-            scale           : glm::vec3(1.0, 1.0, 1.0),
-            reference_point : glm::zero(),
-            node_type       : SceneNodeType::Empty,
-            name            : String::new(),
+            planet_id: 0,
+            position: glm::zero(),
+            rotation: glm::zero(),
+            scale: glm::vec3(1.0, 1.0, 1.0),
+            reference_point: glm::zero(),
+            node_type: SceneNodeType::Empty,
+            name: String::new(),
             current_transformation_matrix: glm::identity(),
-            distance        : 0.0,
-            vao             : Default::default(),
-            index_count     : -1,
-            vao_generate      : Arc::new(Mutex::new((VAOStatus::default(), mesh::Mesh::default()))),
-            texture_id      : None,
-            children        : vec![],
+            distance: 0.0,
+            vao: Default::default(),
+            index_count: -1,
+            vao_generate: Arc::new(Mutex::new((VAOStatus::default(), mesh::Mesh::default()))),
+            texture_id: None,
+            children: vec![],
         })))
     }
 
     pub fn with_type(node_type: SceneNodeType) -> Node {
         ManuallyDrop::new(Pin::new(Box::new(SceneNode {
             node_id: NODE_COUNTER.fetch_add(1, Ordering::Relaxed) as usize,
-            planet_id       : 0,
-            position        : glm::zero(),
-            rotation        : glm::zero(),
-            scale           : glm::vec3(1.0, 1.0, 1.0),
-            reference_point : glm::zero(),
+            planet_id: 0,
+            position: glm::zero(),
+            rotation: glm::zero(),
+            scale: glm::vec3(1.0, 1.0, 1.0),
+            reference_point: glm::zero(),
             node_type,
-            name            : String::new(),
+            name: String::new(),
             current_transformation_matrix: glm::identity(),
-            distance        : 0.0,
-            vao             : Default::default(),
-            index_count     : -1,
-            vao_generate      : Arc::new(Mutex::new((VAOStatus::default(), mesh::Mesh::default()))),
-            texture_id      : None,
-            children        : vec![],
+            distance: 0.0,
+            vao: Default::default(),
+            index_count: -1,
+            vao_generate: Arc::new(Mutex::new((VAOStatus::default(), mesh::Mesh::default()))),
+            texture_id: None,
+            children: vec![],
         })))
     }
 
     pub fn from_vao(vao: mesh::VAOobj) -> Node {
         ManuallyDrop::new(Pin::new(Box::new(SceneNode {
             node_id: NODE_COUNTER.fetch_add(1, Ordering::Relaxed) as usize,
-            planet_id       : 0,
-            position        : glm::zero(),
-            rotation        : glm::zero(),
-            scale           : glm::vec3(1.0, 1.0, 1.0),
-            reference_point : glm::zero(),
-            node_type       : SceneNodeType::Geometry,
-            name            : String::new(),
+            planet_id: 0,
+            position: glm::zero(),
+            rotation: glm::zero(),
+            scale: glm::vec3(1.0, 1.0, 1.0),
+            reference_point: glm::zero(),
+            node_type: SceneNodeType::Geometry,
+            name: String::new(),
             current_transformation_matrix: glm::identity(),
-            distance        : 0.0,
-            vao             : vao,
-            index_count     : vao.n,
-            vao_generate      : Arc::new(Mutex::new((VAOStatus::Ready, mesh::Mesh::default()))),
-            texture_id      : None,
+            distance: 0.0,
+            vao: vao,
+            index_count: vao.n,
+            vao_generate: Arc::new(Mutex::new((VAOStatus::Ready, mesh::Mesh::default()))),
+            texture_id: None,
             children: vec![],
         })))
     }
@@ -149,14 +156,13 @@ impl SceneNode {
     }
 
     pub fn add_child(&mut self, child: &SceneNode) {
-        self.children.push(child as *const SceneNode as *mut SceneNode)
+        self.children
+            .push(child as *const SceneNode as *mut SceneNode)
     }
 
     #[allow(dead_code)]
     pub fn get_child(&mut self, index: usize) -> &mut SceneNode {
-        unsafe {
-            &mut (*self.children[index])
-        }
+        unsafe { &mut (*self.children[index]) }
     }
 
     #[allow(dead_code)]
@@ -193,10 +199,22 @@ impl SceneNode {
             self.reference_point.x,
             self.reference_point.y,
             self.reference_point.z,
-            m[0], m[4], m[8],  m[12],
-            m[1], m[5], m[9],  m[13],
-            m[2], m[6], m[10], m[14],
-            m[3], m[7], m[11], m[15],
+            m[0],
+            m[4],
+            m[8],
+            m[12],
+            m[1],
+            m[5],
+            m[9],
+            m[13],
+            m[2],
+            m[6],
+            m[10],
+            m[14],
+            m[3],
+            m[7],
+            m[11],
+            m[15],
         );
     }
 
@@ -220,25 +238,22 @@ impl SceneNode {
         transform = glm::translate(&transform, &(-self.reference_point));
         // Scale
         transform = glm::scale(&transform, &self.scale);
-    
-    
+
         // Update the node's transformation matrix
         self.current_transformation_matrix = transformation_so_far * transform;
-        let position = glm::vec4_to_vec3(&(
-            self.current_transformation_matrix * glm::vec4(0.0, 0.0, 0.0, 1.0)
-        ));
+        let position = glm::vec4_to_vec3(
+            &(self.current_transformation_matrix * glm::vec4(0.0, 0.0, 0.0, 1.0)),
+        );
         let scale = glm::vec3(
             self.current_transformation_matrix[0],
-            self.current_transformation_matrix[4+1],
-            self.current_transformation_matrix[4*2+2],
+            self.current_transformation_matrix[4 + 1],
+            self.current_transformation_matrix[4 * 2 + 2],
         );
         self.distance = glm::length(&(player_position - position)) - scale.x;
         // Recurse
         for &child in &self.children {
-            (&mut *child).update_node_transformations(
-                &self.current_transformation_matrix,
-                player_position
-            );
+            (&mut *child)
+                .update_node_transformations(&self.current_transformation_matrix, player_position);
         }
     }
 
@@ -248,54 +263,63 @@ impl SceneNode {
     /// * `sh` - Active shader
     pub unsafe fn draw_scene(
         &self,
-        view_projection_matrix: &glm::Mat4, 
+        view_projection_matrix: &glm::Mat4,
         sh: &crate::shader::Shader,
-        clipping: (f32, f32)
+        clipping: (f32, f32),
     ) {
         use SceneNodeType::*;
         // Check if node is drawable, set model specific uniforms, draw
         match self.node_type {
-        PlanetSkip => return,
-        Geometry | 
-        Geometry2d | 
-        Planet | 
-        Ocean |
-        Skybox => {
-            if self.index_count != -1 && (!matches!(self.node_type, Ocean | Planet) 
-            || (self.distance >= clipping.0 || self.distance < 10.0 * clipping.0)) {
+            PlanetSkip => return,
+            Geometry | Geometry2d | Planet | Ocean | Skybox => {
+                if self.index_count != -1
+                    && (!matches!(self.node_type, Ocean | Planet)
+                        || (self.distance >= clipping.0 || self.distance < 10.0 * clipping.0))
+                {
+                    gl::BindVertexArray(self.vao.vao);
 
-                gl::BindVertexArray(self.vao.vao);
-            
-                let u_node_type = sh.get_uniform_location("u_node_type");
-                gl::Uniform1ui(u_node_type, self.node_type as u32);
-                // Applies only for planets, but send anyway
-                let u_node_type = sh.get_uniform_location("u_current_planet_id");
-                gl::Uniform1ui(u_node_type, self.planet_id as u32);
-                
-                let u_mvp = sh.get_uniform_location("u_mvp");
-                let mvp = match self.node_type {
-                    SceneNodeType::Geometry2d => self.current_transformation_matrix,
-                    _ => view_projection_matrix * self.current_transformation_matrix
-                };
-                gl::UniformMatrix4fv(u_mvp, 1, gl::FALSE, mvp.as_ptr());
-                
-                let u_model = sh.get_uniform_location("u_model");
-                gl::UniformMatrix4fv(u_model, 1, gl::FALSE, self.current_transformation_matrix.as_ptr());
+                    let u_node_type = sh.get_uniform_location("u_node_type");
+                    gl::Uniform1ui(u_node_type, self.node_type as u32);
+                    // Applies only for planets, but send anyway
+                    let u_node_type = sh.get_uniform_location("u_current_planet_id");
+                    gl::Uniform1ui(u_node_type, self.planet_id as u32);
 
-                // Bind textures, or signal that none exist
-                let u_has_texture = sh.get_uniform_location("u_has_texture");
-                if let Some(texture_id) = self.texture_id {
-                    gl::BindTextureUnit(0, texture_id);
-                    gl::Uniform1i(u_has_texture, 1);
-                } else {
-                    gl::Uniform1i(u_has_texture, 1);
+                    let u_mvp = sh.get_uniform_location("u_mvp");
+                    let mvp = match self.node_type {
+                        SceneNodeType::Geometry2d => self.current_transformation_matrix,
+                        _ => view_projection_matrix * self.current_transformation_matrix,
+                    };
+                    gl::UniformMatrix4fv(u_mvp, 1, gl::FALSE, mvp.as_ptr());
+
+                    let u_model = sh.get_uniform_location("u_model");
+                    gl::UniformMatrix4fv(
+                        u_model,
+                        1,
+                        gl::FALSE,
+                        self.current_transformation_matrix.as_ptr(),
+                    );
+
+                    // Bind textures, or signal that none exist
+                    let u_has_texture = sh.get_uniform_location("u_has_texture");
+                    if let Some(texture_id) = self.texture_id {
+                        gl::BindTextureUnit(0, texture_id);
+                        gl::Uniform1i(u_has_texture, 1);
+                    } else {
+                        gl::Uniform1i(u_has_texture, 1);
+                    }
+
+                    gl::DrawElements(
+                        gl::TRIANGLES,
+                        self.index_count,
+                        gl::UNSIGNED_INT,
+                        std::ptr::null(),
+                    );
                 }
-            
-                gl::DrawElements(gl::TRIANGLES, self.index_count, gl::UNSIGNED_INT, std::ptr::null());
+                if matches!(self.node_type, Ocean | Planet) {
+                    return;
+                } // Planet and Ocean mesh can't have children
             }
-            if matches!(self.node_type, Ocean | Planet) { return } // Planet and Ocean mesh can't have children
-        },
-        _ => ()
+            _ => (),
         }
 
         // Recurse
@@ -313,14 +337,16 @@ impl SceneNode {
     pub unsafe fn update_vertex_buffer(&self, mesh: &mesh::Mesh) {
         gl::BindVertexArray(self.vao.vao);
         gl::BindBuffer(gl::ARRAY_BUFFER, self.vao.vbo);
-        
+
         let vbuf_size = util::byte_size_of_array(&mesh.vertices);
         let vbuf_data = util::pointer_to_array(&mesh.vertices);
 
-        gl::BufferData(gl::ARRAY_BUFFER, 
-                        vbuf_size,
-                        vbuf_data as *const _,
-                        gl::STATIC_DRAW); 
+        gl::BufferData(
+            gl::ARRAY_BUFFER,
+            vbuf_size,
+            vbuf_data as *const _,
+            gl::STATIC_DRAW,
+        );
     }
     pub unsafe fn update_index_buffer(&mut self, mesh: &mesh::Mesh) {
         gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, self.vao.ibo);
@@ -328,53 +354,54 @@ impl SceneNode {
         let ibuf_size = util::byte_size_of_array(&mesh.indices);
         let ibuf_data = util::pointer_to_array(&mesh.indices);
 
-        gl::BufferData(gl::ELEMENT_ARRAY_BUFFER,
-                    ibuf_size,
-                    ibuf_data as *const _,
-                    gl::STATIC_DRAW);
+        gl::BufferData(
+            gl::ELEMENT_ARRAY_BUFFER,
+            ibuf_size,
+            ibuf_data as *const _,
+            gl::STATIC_DRAW,
+        );
         self.index_count = mesh.index_count;
     }
     pub unsafe fn update_normal_buffer(&self, mesh: &mesh::Mesh) {
         gl::BindVertexArray(self.vao.vao);
         gl::BindBuffer(gl::ARRAY_BUFFER, self.vao.nbo);
-        
+
         let nbuf_size = util::byte_size_of_array(&mesh.normals);
         let nbuf_data = util::pointer_to_array(&mesh.normals);
 
-        gl::BufferData(gl::ARRAY_BUFFER, 
-                        nbuf_size,
-                        nbuf_data as *const _,
-                        gl::STATIC_DRAW); 
+        gl::BufferData(
+            gl::ARRAY_BUFFER,
+            nbuf_size,
+            nbuf_data as *const _,
+            gl::STATIC_DRAW,
+        );
     }
     pub unsafe fn update_texture_buffer(&self, mesh: &mesh::Mesh) {
         gl::BindVertexArray(self.vao.vao);
         gl::BindBuffer(gl::ARRAY_BUFFER, self.vao.texbo);
-        
+
         let tbuf_size = util::byte_size_of_array(&mesh.texture_coordinates);
         let tbuf_data = util::pointer_to_array(&mesh.texture_coordinates);
 
-        gl::BufferData(gl::ARRAY_BUFFER, 
-                        tbuf_size,
-                        tbuf_data as *const _,
-                        gl::STATIC_DRAW); 
+        gl::BufferData(
+            gl::ARRAY_BUFFER,
+            tbuf_size,
+            tbuf_data as *const _,
+            gl::STATIC_DRAW,
+        );
     }
 }
-
 
 // You can also use square brackets to access the children of a SceneNode
 use std::ops::{Index, IndexMut};
 impl Index<usize> for SceneNode {
     type Output = SceneNode;
     fn index(&self, index: usize) -> &SceneNode {
-        unsafe {
-            & *(self.children[index] as *const SceneNode)
-        }
+        unsafe { &*(self.children[index] as *const SceneNode) }
     }
 }
 impl IndexMut<usize> for SceneNode {
     fn index_mut(&mut self, index: usize) -> &mut SceneNode {
-        unsafe {
-            &mut (*self.children[index])
-        }
+        unsafe { &mut (*self.children[index]) }
     }
 }

@@ -1,14 +1,14 @@
 extern crate nalgebra_glm as glm;
-use std::ffi::CString;
-#[allow(unused_imports)]
-use std::{ mem, ptr, os::raw::c_void };
 use glm::Scalar;
 use itertools::Itertools;
+use std::ffi::CString;
 use std::sync::atomic::AtomicU64;
+#[allow(unused_imports)]
+use std::{mem, os::raw::c_void, ptr};
 
 //-----------------------------------------------------------------------------/
-// Helper functions to make interacting with OpenGL a little bit 
-// prettier. You *WILL* need these! The names should be pretty self 
+// Helper functions to make interacting with OpenGL a little bit
+// prettier. You *WILL* need these! The names should be pretty self
 // explanatory.
 //-----------------------------------------------------------------------------/
 
@@ -38,17 +38,17 @@ pub fn size_of<T>() -> i32 {
 /// Convert an array of Vec2 into an array of numbers
 pub fn from_array_of_vec2<T: Scalar + Copy>(arr: Vec<glm::TVec2<T>>) -> Vec<T> {
     arr.iter()
-    .map(|v| vec![v[0], v[1]])
-    .flatten()
-    .collect::<_>()
+        .map(|v| vec![v[0], v[1]])
+        .flatten()
+        .collect::<_>()
 }
 #[allow(unused)]
 /// Convert an array of Vec3 into an array of numbers
 pub fn from_array_of_vec3<T: Scalar + Copy>(arr: Vec<glm::TVec3<T>>) -> Vec<T> {
     arr.iter()
-    .map(|v| vec![v[0], v[1], v[2]])
-    .flatten()
-    .collect::<_>()
+        .map(|v| vec![v[0], v[1], v[2]])
+        .flatten()
+        .collect::<_>()
 }
 #[allow(unused)]
 /// Convert an array of Vec4 into an array of numbers
@@ -62,26 +62,25 @@ pub fn from_array_of_vec4<T: Scalar + Copy>(arr: Vec<glm::TVec4<T>>) -> Vec<T> {
 /// Convert an array of numbers representing 2-tuples to array of vec2
 pub fn to_array_of_vec2<T: Scalar + Copy>(arr: Vec<T>) -> Vec<glm::TVec2<T>> {
     arr.iter()
-    .chunks(2)
-    .into_iter()
-    .map(|mut step| glm::vec2(
-        *step.next().unwrap(), 
-        *step.next().unwrap()
-    ))
-    .collect::<_>()
+        .chunks(2)
+        .into_iter()
+        .map(|mut step| glm::vec2(*step.next().unwrap(), *step.next().unwrap()))
+        .collect::<_>()
 }
 #[allow(unused)]
 /// Convert an array of numbers representing 3-tuples to array of vec3
 pub fn to_array_of_vec3<T: Scalar + Copy>(arr: Vec<T>) -> Vec<glm::TVec3<T>> {
     arr.iter()
-    .chunks(3)
-    .into_iter()
-    .map(|mut step| glm::vec3(
-        *step.next().unwrap(), 
-        *step.next().unwrap(),
-        *step.next().unwrap(),
-    ))
-    .collect::<_>()
+        .chunks(3)
+        .into_iter()
+        .map(|mut step| {
+            glm::vec3(
+                *step.next().unwrap(),
+                *step.next().unwrap(),
+                *step.next().unwrap(),
+            )
+        })
+        .collect::<_>()
 }
 #[allow(unused)]
 /// Convert an array of numbers representing 4-tuples to array of vec4
@@ -89,12 +88,14 @@ pub fn to_array_of_vec4<T: Scalar + Copy>(arr: Vec<T>) -> Vec<glm::TVec4<T>> {
     arr.iter()
         .chunks(4)
         .into_iter()
-        .map(|mut step| glm::vec4(
-            *step.next().unwrap(), 
-            *step.next().unwrap(),
-            *step.next().unwrap(),
-            *step.next().unwrap(),
-        ))
+        .map(|mut step| {
+            glm::vec4(
+                *step.next().unwrap(),
+                *step.next().unwrap(),
+                *step.next().unwrap(),
+                *step.next().unwrap(),
+            )
+        })
         .collect::<_>()
 }
 
@@ -128,21 +129,29 @@ pub fn vec2_f64_to_f632(v: &glm::TVec2<f64>) -> glm::TVec2<f32> {
 //-----------------------------------------------------------------------------/
 
 pub unsafe fn get_gl_string(name: gl::types::GLenum) -> String {
-    std::ffi::CStr::from_ptr(gl::GetString(name) as *mut i8).to_string_lossy().to_string()
+    std::ffi::CStr::from_ptr(gl::GetString(name) as *mut i8)
+        .to_string_lossy()
+        .to_string()
 }
 
 // Debug callback to panic upon enountering any OpenGL error
 pub extern "system" fn debug_callback(
-    source: u32, e_type: u32, id: u32,
-    severity: u32, _length: i32,
-    msg: *const i8, _data: *mut std::ffi::c_void
+    source: u32,
+    e_type: u32,
+    id: u32,
+    severity: u32,
+    _length: i32,
+    msg: *const i8,
+    _data: *mut std::ffi::c_void,
 ) {
-    if e_type != gl::DEBUG_TYPE_ERROR { return }
-    if severity == gl::DEBUG_SEVERITY_HIGH ||
-       severity == gl::DEBUG_SEVERITY_MEDIUM ||
-       severity == gl::DEBUG_SEVERITY_LOW
-       {
-           let severity_string = match severity {
+    if e_type != gl::DEBUG_TYPE_ERROR {
+        return;
+    }
+    if severity == gl::DEBUG_SEVERITY_HIGH
+        || severity == gl::DEBUG_SEVERITY_MEDIUM
+        || severity == gl::DEBUG_SEVERITY_LOW
+    {
+        let severity_string = match severity {
             gl::DEBUG_SEVERITY_HIGH => "high",
             gl::DEBUG_SEVERITY_MEDIUM => "medium",
             gl::DEBUG_SEVERITY_LOW => "low",
@@ -151,8 +160,10 @@ pub extern "system" fn debug_callback(
         unsafe {
             let string = CString::from_raw(msg as *mut i8);
             let error_message = String::from_utf8_lossy(string.as_bytes()).to_string();
-            panic!("{}: Error of severity {} raised from {}: {}\n",
-            id, severity_string, source, error_message);
+            panic!(
+                "{}: Error of severity {} raised from {}: {}\n",
+                id, severity_string, source, error_message
+            );
         }
     }
 }
@@ -163,26 +174,25 @@ pub extern "system" fn debug_callback(
 
 #[derive(Default, Debug)]
 pub struct Config {
-    pub fov             : f32,
-    pub clip_near       : f32,
-    pub clip_far        : f32,
-    pub movement_speed  : f32,
-    pub mouse_speed     : f32,
-    pub tilt_speed      : f32,
-    pub tilt            : f32,
-    pub init_position   : [f32; 3],
-    pub bg_color        : [f32; 4],
-    pub init_h_angle    : f32,
-    pub init_v_angle    : f32,
-    pub camera_position : CameraPosition,
-    pub polymode        : usize,
-    pub draw_gui        : bool,
-    pub render_limit    : f32,
-    pub player_height   : f32,
-    pub jump_speed      : f32,
+    pub fov: f32,
+    pub clip_near: f32,
+    pub clip_far: f32,
+    pub movement_speed: f32,
+    pub mouse_speed: f32,
+    pub tilt_speed: f32,
+    pub tilt: f32,
+    pub init_position: [f32; 3],
+    pub bg_color: [f32; 4],
+    pub init_h_angle: f32,
+    pub init_v_angle: f32,
+    pub camera_position: CameraPosition,
+    pub polymode: usize,
+    pub draw_gui: bool,
+    pub render_limit: f32,
+    pub player_height: f32,
+    pub jump_speed: f32,
     //init_direction: [f32; 3],
 }
-
 
 impl Config {
     fn parse_array<T: std::str::FromStr + std::fmt::Debug, const D: usize>(val: &str) -> [T; D] {
@@ -190,14 +200,22 @@ impl Config {
         let mut s = val.trim().split(",");
         let mut arr = Vec::new();
         (0..D).for_each(|_| {
-            arr.push(s.next().unwrap().trim().parse::<T>().unwrap_or_else(|_t| panic!("Config::parse_array")));
+            arr.push(
+                s.next()
+                    .unwrap()
+                    .trim()
+                    .parse::<T>()
+                    .unwrap_or_else(|_t| panic!("Config::parse_array")),
+            );
         });
-        
+
         arr.try_into().unwrap()
     }
     pub fn load() -> Self {
         use std::fs;
-        let mut conf = Config { ..Default::default() };
+        let mut conf = Config {
+            ..Default::default()
+        };
         fs::read_to_string("resources/settings.conf")
             .unwrap()
             .lines()
@@ -216,7 +234,11 @@ impl Config {
                     "tilt" => conf.tilt = val.trim().parse::<f32>().unwrap(),
                     "init_h_angle" => conf.init_h_angle = val.trim().parse::<f32>().unwrap(),
                     "init_v_angle" => conf.init_v_angle = val.trim().parse::<f32>().unwrap(),
-                    "camera_position" => conf.camera_position = num::FromPrimitive::from_u32(val.trim().parse::<u32>().unwrap()).unwrap(),
+                    "camera_position" => {
+                        conf.camera_position =
+                            num::FromPrimitive::from_u32(val.trim().parse::<u32>().unwrap())
+                                .unwrap()
+                    }
                     "init_position" => conf.init_position = Self::parse_array::<f32, 3>(val),
                     "bg_color" => conf.bg_color = Self::parse_array::<f32, 4>(val),
                     "polymode" => conf.polymode = val.trim().parse::<usize>().unwrap(),
@@ -239,19 +261,18 @@ pub fn vec_right(h_angle: f32) -> glm::Vec3 {
     glm::vec3(
         (h_angle - 3.14 / 2.0).sin(),
         0.0,
-        (h_angle - 3.14/2.0).cos()
+        (h_angle - 3.14 / 2.0).cos(),
     )
 }
 
-/// Calculate direction vector from 
+/// Calculate direction vector from
 pub fn vec_direction(h_angle: f32, v_angle: f32) -> glm::Vec3 {
     glm::vec3(
         v_angle.cos() * h_angle.sin(),
         v_angle.sin(),
-        v_angle.cos() * h_angle.cos()
+        v_angle.cos() * h_angle.cos(),
     )
 }
-
 
 // pub struct Heading {
 //     pub x     : f32,
@@ -292,27 +313,26 @@ pub fn vec_direction(h_angle: f32, v_angle: f32) -> glm::Vec3 {
 //     time = time - starttime;
 //     if open {
 //         (
-//             open_x.min( open_x * 0.2 * time), 
+//             open_x.min( open_x * 0.2 * time),
 //             open_z.min(if time < open_x / 0.2 { 0.0 } else { 0.2 * time }),
 //         )
 //     } else {
 //         (
-//             0.0f32.max(if time < open_z / 0.2 { open_x } else { open_x - open_x * 0.2 * time }), 
+//             0.0f32.max(if time < open_z / 0.2 { open_x } else { open_x - open_x * 0.2 * time }),
 //             0.0f32.max(open_z - 0.2 * time),
 //         )
 //     }
 // }
 
 #[derive(Debug, PartialEq, Copy, Clone, num_derive::FromPrimitive)]
-pub enum CameraPosition { 
-    ThirdPerson,        // Third person camera on helicopter
-    FirstPerson,        // Camera on pilot head (not finished)
-    //Chase
-    //Free              // Free movement
+pub enum CameraPosition {
+    ThirdPerson, // Third person camera on helicopter
+    FirstPerson, // Camera on pilot head (not finished)
+                 //Chase
+                 //Free              // Free movement
 }
 impl Default for CameraPosition {
     fn default() -> Self {
         Self::FirstPerson
     }
 }
-
