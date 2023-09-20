@@ -1,10 +1,15 @@
-use tobj;
-use crate::util;
 use crate::globals::FRACTAL_ITERATIONS;
+use crate::util;
+use tobj;
 
 // internal helper
 fn generate_color_vec(color: glm::TVec4<f32>, num: usize) -> Vec<f32> {
-    glm::value_ptr(&color).iter().cloned().cycle().take(num*4).collect()
+    glm::value_ptr(&color)
+        .iter()
+        .cloned()
+        .cycle()
+        .take(num * 4)
+        .collect()
     //color.iter().cloned().cycle().take(num*4).collect()
 }
 /// Smooth min
@@ -13,11 +18,10 @@ fn generate_color_vec(color: glm::TVec4<f32>, num: usize) -> Vec<f32> {
 //     return a.min(b) - h.powi(3) * k / 6.0;
 // }
 
-
 // GL util VAO object
 #[derive(Copy, Clone, Default, Debug)]
 pub struct VAOobj {
-    pub vao: u32,   // Vertex Array Object 
+    pub vao: u32,   // Vertex Array Object
     pub vbo: u32,   // Vertex Buffer Object
     pub ibo: u32,   // Index Buffer Object
     pub cbo: u32,   // Color Buffer Object
@@ -47,7 +51,11 @@ impl Mesh {
         Mesh {
             vertices: mesh.positions,
             normals: mesh.normals,
-            texture_coordinates: if mesh.texcoords.len() > 0 { mesh.texcoords } else { vec![0.0; num_verts * 2] },
+            texture_coordinates: if mesh.texcoords.len() > 0 {
+                mesh.texcoords
+            } else {
+                vec![0.0; num_verts * 2]
+            },
             indices: mesh.indices,
             colors: generate_color_vec(color, num_verts),
             index_count,
@@ -56,7 +64,10 @@ impl Mesh {
 
     /// Extended mkvao_simple_color to associate colors to vertices
     pub unsafe fn mkvao(&self) -> VAOobj {
-        let mut id = VAOobj { n: self.index_count, ..Default::default() };
+        let mut id = VAOobj {
+            n: self.index_count,
+            ..Default::default()
+        };
 
         /* Create and bind vertex array */
         gl::GenVertexArrays(1, &mut id.vao);
@@ -70,10 +81,12 @@ impl Mesh {
         let ibuf_size = util::byte_size_of_array(&self.indices);
         let ibuf_data = util::pointer_to_array(&self.indices);
 
-        gl::BufferData(gl::ELEMENT_ARRAY_BUFFER,
-                    ibuf_size,
-                    ibuf_data as *const _,
-                    gl::STATIC_DRAW);
+        gl::BufferData(
+            gl::ELEMENT_ARRAY_BUFFER,
+            ibuf_size,
+            ibuf_data as *const _,
+            gl::STATIC_DRAW,
+        );
 
         // Next sections are vertex attributes
 
@@ -84,10 +97,12 @@ impl Mesh {
         let vbuf_size = util::byte_size_of_array(&self.vertices);
         let vbuf_data = util::pointer_to_array(&self.vertices);
 
-        gl::BufferData(gl::ARRAY_BUFFER, 
-                        vbuf_size,
-                        vbuf_data as *const _,
-                        gl::STATIC_DRAW); 
+        gl::BufferData(
+            gl::ARRAY_BUFFER,
+            vbuf_size,
+            vbuf_data as *const _,
+            gl::STATIC_DRAW,
+        );
 
         let mut attrib_idx = 0;
         /* Define attrib ptr for vertex buffer */
@@ -101,10 +116,12 @@ impl Mesh {
         let cbuf_size = util::byte_size_of_array(&self.colors);
         let cbuf_data = util::pointer_to_array(&self.colors);
 
-        gl::BufferData( gl::ARRAY_BUFFER,
-                        cbuf_size,
-                        cbuf_data as *const _,
-                        gl::STATIC_DRAW);
+        gl::BufferData(
+            gl::ARRAY_BUFFER,
+            cbuf_size,
+            cbuf_data as *const _,
+            gl::STATIC_DRAW,
+        );
 
         attrib_idx += 1;
         /* Define attrib ptr for color buffer */
@@ -117,11 +134,13 @@ impl Mesh {
         let nbo_size = util::byte_size_of_array(&self.normals);
         let nbo_data = util::pointer_to_array(&self.normals);
 
-        gl::BufferData( gl::ARRAY_BUFFER,
-                        nbo_size,
-                        nbo_data as *const _,
-                        gl::STATIC_DRAW);
-        
+        gl::BufferData(
+            gl::ARRAY_BUFFER,
+            nbo_size,
+            nbo_data as *const _,
+            gl::STATIC_DRAW,
+        );
+
         attrib_idx += 1;
         /* Define attrib ptr for normals buffer */
         gl::EnableVertexAttribArray(attrib_idx);
@@ -133,11 +152,13 @@ impl Mesh {
         let texbo_size = util::byte_size_of_array(&self.texture_coordinates);
         let texbo_data = util::pointer_to_array(&self.texture_coordinates);
 
-        gl::BufferData( gl::ARRAY_BUFFER,
-                        texbo_size,
-                        texbo_data as *const _,
-                        gl::STATIC_DRAW);
-        
+        gl::BufferData(
+            gl::ARRAY_BUFFER,
+            texbo_size,
+            texbo_data as *const _,
+            gl::STATIC_DRAW,
+        );
+
         attrib_idx += 1;
         /* Define attrib ptr for normals buffer */
         gl::EnableVertexAttribArray(attrib_idx);
@@ -152,7 +173,7 @@ impl Mesh {
         tiling_textures: bool,
         inverted: bool,
         texture_scale3d: glm::TVec3<f32>,
-        color: glm::TVec4<f32>
+        color: glm::TVec4<f32>,
     ) -> Self {
         let mut points = [glm::vec3(0.0, 0.0, 0.0); 8];
         let mut indices = vec![0; 36];
@@ -160,41 +181,43 @@ impl Mesh {
         for y in 0..2 {
             for z in 0..2 {
                 for x in 0..2 {
-                    points[x+y*4+z*2] = glm::vec3(
-                        x as f32 * 2.0 - 1.0, 
-                        y as f32 * 2.0 - 1.0, 
+                    points[x + y * 4 + z * 2] = glm::vec3(
+                        x as f32 * 2.0 - 1.0,
+                        y as f32 * 2.0 - 1.0,
                         z as f32 * 2.0 - 1.0,
-                    ).component_mul(&scale) * 0.5;
+                    )
+                    .component_mul(&scale)
+                        * 0.5;
                 }
             }
         }
 
         let faces = [
-            [2,3,0,1], // Bottom 
-            [4,5,6,7], // Top 
-            [7,5,3,1], // Right 
-            [4,6,0,2], // Left 
-            [5,4,1,0], // Back 
-            [6,7,2,3], // Front 
+            [2, 3, 0, 1], // Bottom
+            [4, 5, 6, 7], // Top
+            [7, 5, 3, 1], // Right
+            [4, 6, 0, 2], // Left
+            [5, 4, 1, 0], // Back
+            [6, 7, 2, 3], // Front
         ];
 
         let scale = scale.component_mul(&texture_scale3d);
         let face_scale = [
-            glm::vec2(-scale.x,-scale.z), // Bottom
-            glm::vec2(-scale.x,-scale.z), // Top
-            glm::vec2( scale.z, scale.y), // Right
-            glm::vec2( scale.z, scale.y), // Left
-            glm::vec2( scale.x, scale.y), // Back
-            glm::vec2( scale.x, scale.y), // Front
+            glm::vec2(-scale.x, -scale.z), // Bottom
+            glm::vec2(-scale.x, -scale.z), // Top
+            glm::vec2(scale.z, scale.y),   // Right
+            glm::vec2(scale.z, scale.y),   // Left
+            glm::vec2(scale.x, scale.y),   // Back
+            glm::vec2(scale.x, scale.y),   // Front
         ];
 
         let normals = [
-            glm::vec3( 0.0,-1.0, 0.0), // Bottom 
-            glm::vec3( 0.0, 1.0, 0.0), // Top 
-            glm::vec3( 1.0, 0.0, 0.0), // Right 
-            glm::vec3(-1.0, 0.0, 0.0), // Left 
-            glm::vec3( 0.0, 0.0,-1.0), // Back 
-            glm::vec3( 0.0, 0.0, 1.0), // Front 
+            glm::vec3(0.0, -1.0, 0.0), // Bottom
+            glm::vec3(0.0, 1.0, 0.0),  // Top
+            glm::vec3(1.0, 0.0, 0.0),  // Right
+            glm::vec3(-1.0, 0.0, 0.0), // Left
+            glm::vec3(0.0, 0.0, -1.0), // Back
+            glm::vec3(0.0, 0.0, 1.0),  // Front
         ];
 
         let uvs = [
@@ -227,21 +250,21 @@ impl Mesh {
             for i in 0..6 {
                 vertices.push(points[indices[offset + i] as usize]);
                 mindices.push((offset + i) as u32);
-                mnormals.push(normals[face] * (if inverted{-1.0}else{1.0}));
+                mnormals.push(normals[face] * (if inverted { -1.0 } else { 1.0 }));
             }
 
-            let texture_scale_factor =  if tiling_textures {
+            let texture_scale_factor = if tiling_textures {
                 face_scale[face].component_div(&texture_scale)
             } else {
                 glm::vec2(1.0, 1.0)
             };
 
             if inverted {
-                for &i in [1,2,3,1,0,2].iter() {
+                for &i in [1, 2, 3, 1, 0, 2].iter() {
                     texture_coordinates.push(uvs[i].component_mul(&texture_scale_factor));
                 }
             } else {
-                for &i in [3,1,0,3,0,2].iter() {
+                for &i in [3, 1, 0, 3, 0, 2].iter() {
                     texture_coordinates.push(uvs[i].component_mul(&texture_scale_factor));
                 }
             }
@@ -253,7 +276,7 @@ impl Mesh {
             normals: util::from_array_of_vec3(mnormals),
             texture_coordinates: util::from_array_of_vec2(texture_coordinates),
             colors: generate_color_vec(color, vertex_count),
-            index_count: 36
+            index_count: 36,
         }
     }
 
@@ -308,19 +331,18 @@ impl Mesh {
     pub fn cs_plane(
         scale: glm::TVec3<f32>,
         rotation: glm::TVec3<f32>,
-        position: glm::TVec3<f32>, 
+        position: glm::TVec3<f32>,
         subdivisions: usize,
         color: Option<glm::TVec4<f32>>,
         cubesphere: bool,
     ) -> Self {
         let res = 1 + subdivisions;
         let vertex_count = res * res;
-        let index_count = 6 * (res-1) * (res-1);
+        let index_count = 6 * (res - 1) * (res - 1);
         let step = scale / subdivisions as f32 * 2.0;
         util::MEMORY_USAGE.fetch_add(
-            vertex_count as u64 * 4 * 8
-            + index_count as u64* 4, 
-            std::sync::atomic::Ordering::Relaxed
+            vertex_count as u64 * 4 * 8 + index_count as u64 * 4,
+            std::sync::atomic::Ordering::Relaxed,
         );
         // let timer = std::time::SystemTime::now();
         // eprint!("Constructing CS plane with {} vertices . . . ", vertex_count);
@@ -328,7 +350,6 @@ impl Mesh {
         let mut normals = vec![glm::vec3(0.0, 1.0, 0.0); vertex_count];
         let mut texture = vec![glm::vec2(0.0, 0.0); vertex_count];
         let mut indices = vec![0; index_count];
-
 
         for z in 0..res {
             for x in 0..res {
@@ -343,11 +364,19 @@ impl Mesh {
                 // Convert to side of cubesphere
                 if cubesphere {
                     pos = glm::vec3(
-                        pos.x * (1.0 - pos.y.powi(2) / 2.0 - pos.z.powi(2) / 2.0 + pos.y.powi(2) * pos.z.powi(2) / 3.0).sqrt(),
-                        pos.y * (1.0 - pos.x.powi(2) / 2.0 - pos.z.powi(2) / 2.0 + pos.x.powi(2) * pos.z.powi(2) / 3.0).sqrt(),
-                        pos.z * (1.0 - pos.x.powi(2) / 2.0 - pos.y.powi(2) / 2.0 + pos.x.powi(2) * pos.y.powi(2) / 3.0).sqrt(),
+                        pos.x
+                            * (1.0 - pos.y.powi(2) / 2.0 - pos.z.powi(2) / 2.0
+                                + pos.y.powi(2) * pos.z.powi(2) / 3.0)
+                                .sqrt(),
+                        pos.y
+                            * (1.0 - pos.x.powi(2) / 2.0 - pos.z.powi(2) / 2.0
+                                + pos.x.powi(2) * pos.z.powi(2) / 3.0)
+                                .sqrt(),
+                        pos.z
+                            * (1.0 - pos.x.powi(2) / 2.0 - pos.y.powi(2) / 2.0
+                                + pos.x.powi(2) * pos.y.powi(2) / 3.0)
+                                .sqrt(),
                     ) * 0.5; // removed: .component_mul(&scale)
-
                 }
                 pos = glm::rotate_x_vec3(&pos, rotation.x);
                 pos = glm::rotate_y_vec3(&pos, rotation.y);
@@ -379,32 +408,43 @@ impl Mesh {
             vertices: util::from_array_of_vec3(vertices),
             normals: util::from_array_of_vec3(normals),
             texture_coordinates: util::from_array_of_vec2(texture),
-            colors: generate_color_vec(color.unwrap_or(glm::vec4(1.0, 1.0, 1.0, 1.0)), vertex_count),
+            colors: generate_color_vec(
+                color.unwrap_or(glm::vec4(1.0, 1.0, 1.0, 1.0)),
+                vertex_count,
+            ),
             indices,
             index_count: index_count as i32,
         }
     }
-
 }
 
 use noise::{NoiseFn, Perlin};
 
 /// Some iterations of noise function to create a fractal noise
-/// 
+///
 /// This apparently is also called fractal Brownian Motion (https://thebookofshaders.com/13/)
 /// - `offset` deprecated
-pub fn fractal_noise(generator: Perlin, point: &glm::TVec3<f32>, size: f64, height: f32, _offset: f32) -> f32 {
+pub fn fractal_noise(
+    generator: Perlin,
+    point: &glm::TVec3<f32>,
+    size: f64,
+    height: f32,
+    _offset: f32,
+) -> f32 {
     let mut noise_sum = 0.0;
     let mut amp = 1.0;
     let mut freq = 1.0;
 
-    for _ in 0..FRACTAL_ITERATIONS {    // octaves
+    for _ in 0..FRACTAL_ITERATIONS {
+        // octaves
         let point = point * freq;
         noise_sum += generator.get([
             point.x as f64 * size, // + seed as f64,
             point.y as f64 * size, // + seed as f64,
             point.z as f64 * size, // + seed as f64,
-        ]) as f32 * amp * height;
+        ]) as f32
+            * amp
+            * height;
         freq *= 2.0;
         amp *= 0.5;
     }
