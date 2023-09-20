@@ -20,13 +20,13 @@ const POLYMODES: [u32;3] = [gl::FILL, gl::POINT, gl::LINE];
 
 /// Initializes game ad runs main game loop
 pub fn game(
-    mouse_delta: Arc<Mutex<(f32, f32)>>, 
+    mouse_delta: Arc<Mutex<(f32, f32)>>,
     pressed_keys: Arc<Mutex<Vec<VirtualKeyCode>>>,
     context: glutin::ContextWrapper<glutin::PossiblyCurrent, glutin::window::Window>
 ) {
 
     let setup_timer = std::time::SystemTime::now();
-    
+
 
     //-------------------------------------------------------------------------/
     // Read config
@@ -35,7 +35,7 @@ pub fn game(
 
     let mut player = player::Player {
         height: conf.player_height,
-        ..Default::default() 
+        ..Default::default()
     };
 
 
@@ -48,7 +48,7 @@ pub fn game(
         let sh = shader::ShaderBuilder::new()
             .attach_file("./resources/shaders/scene.vert", None)
             .attach_file(
-                "./resources/shaders/scene.frag", 
+                "./resources/shaders/scene.frag",
                 Some(vec![
                     "./resources/shaders/noise.glsl",
                 ])
@@ -78,7 +78,7 @@ pub fn game(
     let v_angle = conf.init_v_angle;
     player.direction = util::vec_direction(h_angle, v_angle);
     player.right = util::vec_right(h_angle);
-    
+
 
     //-------------------------------------------------------------------------/
     // GUI meshes
@@ -161,23 +161,23 @@ pub fn game(
         text_node.scale = glm::vec3(1.0, 1.0, 1.0) * text_scale;
         text_node
     });
-    
+
 
     //-------------------------------------------------------------------------/
     // Vertex Array Objects, create vertices or load models
     //-------------------------------------------------------------------------/
-    
+
     // Skybox, inverted cube that stays centered around the player
     let skybox_mesh = mesh::Mesh::cube(
         glm::vec3(1.0, 1.0, 1.0), // Defines visible distance of other objects
-        glm::vec2(1.0, 1.0), true, true, 
+        glm::vec2(1.0, 1.0), true, true,
         glm::vec3(1.0, 1.0, 1.0),
         glm::vec4(0.05, 0.01, 0.06, 0.2),
     );
     let mut skybox_node = SceneNode::from_vao(unsafe { skybox_mesh.mkvao() });
     skybox_node.node_type = SceneNodeType::Skybox;
-    
-    
+
+
     //-------------------------------------------------------------------------/
     // Scene setup, build planets
     //-------------------------------------------------------------------------/
@@ -199,9 +199,9 @@ pub fn game(
     }
 
 
-    //-------------------------------------------------------------------------/        
+    //-------------------------------------------------------------------------/
     // Build GUI
-    //-------------------------------------------------------------------------/        
+    //-------------------------------------------------------------------------/
     let mut gui_root = SceneNode::new();
     //gui_root.add_child(&text_title_node);
     gui_root.add_child(&text_pos_node);
@@ -214,15 +214,15 @@ pub fn game(
     controls_text.for_each(|nd| gui_root.add_child(&nd));
 
 
-    //-------------------------------------------------------------------------/        
+    //-------------------------------------------------------------------------/
     // Timing
     //-------------------------------------------------------------------------/
     let first_frame_time = std::time::Instant::now();
     let mut last_frame_time = first_frame_time;
-    
+
     let mut key_debounce: HashMap<VirtualKeyCode, u32> = HashMap::new();
     let mut frame_counter: u64 = 0;
-    
+
 
     //-------------------------------------------------------------------------/
     //-------------------------------------------------------------------------/
@@ -231,11 +231,11 @@ pub fn game(
     //
     //-------------------------------------------------------------------------/
     //-------------------------------------------------------------------------/
-    eprintln!("Setup done in {:?}. Starting rendering loop.", 
+    eprintln!("Setup done in {:?}. Starting rendering loop.",
         setup_timer.elapsed().unwrap()
     );
     let mut scaled = true;
-    
+
     loop {
         let now = std::time::Instant::now();
         let elapsed = now.duration_since(first_frame_time).as_secs_f32();
@@ -268,8 +268,8 @@ pub fn game(
                 let angle = planets[idx].traj_speed * WORLD_SPEED * elapsed + planets[idx].traj_init_angle.x;
                 let traj_position = glm::vec3(
                     (angle).sin() * planets[idx].trajectory,
-                    planets[idx].traj_init_angle.y, 
-                    (angle).cos() * planets[idx].trajectory, 
+                    planets[idx].traj_init_angle.y,
+                    (angle).cos() * planets[idx].trajectory,
                 );
                 // let rotation = planets[idx].rot_speed * WORLD_SPEED * elapsed + planets[idx].rot_init_angle;
                 // let rotation_vec = planet_nodes[idx].rotation + rotation * planets[idx].rot_axis;
@@ -312,16 +312,16 @@ pub fn game(
             // Trajectory position relative to parent
             let traj_position = glm::vec3(
                 (angle).sin() * planets[i].trajectory,
-                planets[i].traj_init_angle.y, 
-                (angle).cos() * planets[i].trajectory, 
+                planets[i].traj_init_angle.y,
+                (angle).cos() * planets[i].trajectory,
             );
 
             // Rotate back and add origin to get global position
             // - or keep relative rotation as a feature?
             planet_nodes[i].position = origin + traj_position;
                 // + glm::rotate_vec3(
-                //     &traj_position, 
-                //     parent_rotation, 
+                //     &traj_position,
+                //     parent_rotation,
                 //     &-planets[planets[i].parent_id].rot_axis
                 // );
             planets[i].position = planet_nodes[i].position;
@@ -338,7 +338,7 @@ pub fn game(
         //---------------------------------------------------------------------/
         // Mouse input modifies direction
         //---------------------------------------------------------------------/
-        // Handle mouse movement. delta contains the x and y movement of 
+        // Handle mouse movement. delta contains the x and y movement of
         // the mouse since last frame in pixels
         if let Ok(mut delta) = mouse_delta.lock() {
             let cpid = player.closest_planet_id;
@@ -356,11 +356,11 @@ pub fn game(
         if let Ok(keys) = pressed_keys.lock() {
             let cpid = player.closest_planet_id;
             keyboard_input(
-                keys, 
-                &mut key_debounce, 
-                &mut player, 
+                keys,
+                &mut key_debounce,
+                &mut player,
                 &planets[cpid],
-                &mut conf, 
+                &mut conf,
                 delta_time,
             );
         }
@@ -373,7 +373,7 @@ pub fn game(
         // Update GUI
         //---------------------------------------------------------------------/
         // Log position
-        let s = format!("global position: {:.3},{:.3},{:.3}", 
+        let s = format!("global position: {:.3},{:.3},{:.3}",
             player.position.x, player.position.y, player.position.z);
         text_pos_mesh = mesh::Mesh::text_buffer(
             &s,
@@ -382,7 +382,7 @@ pub fn game(
         text_pos_node.update_buffers(&text_pos_mesh);
         // Log gpu memory
         let buf_mem = util::MEMORY_USAGE.load(std::sync::atomic::Ordering::Relaxed);
-        let s = format!("GPU mem {}KiB used for planet buffers", 
+        let s = format!("GPU mem {}KiB used for planet buffers",
             buf_mem / 1024);
         text_gfxmem_mesh = mesh::Mesh::text_buffer(
             &s,
@@ -405,9 +405,9 @@ pub fn game(
         text_closest_node.update_buffers(&text_closest_mesh);
         // Log mouse directional vectors
         let up = player.up();
-        let s = format!("dir: {:.3},{:.3},{:.3} right: {:.3},{:.3},{:.3}, up: {:.3},{:.3},{:.3}", 
-            player.direction.x, player.direction.y, player.direction.z, 
-            player.right.x, player.right.y, player.right.z, 
+        let s = format!("dir: {:.3},{:.3},{:.3} right: {:.3},{:.3},{:.3}, up: {:.3},{:.3},{:.3}",
+            player.direction.x, player.direction.y, player.direction.z,
+            player.right.x, player.right.y, player.right.z,
             up.x, up.y, up.z,
         );
         text_mouse_mesh = mesh::Mesh::text_buffer(
@@ -435,7 +435,7 @@ pub fn game(
             player::PlayerState::FreeFloat => String::from("Free floating"),
             player::PlayerState::Landed(_)   |
             player::PlayerState::Anchored(_) => String::from(
-                &format!("Player h: {:.3}, Terrain h: {:.3}, norm pos: {:.3},{:.3},{:.3}", 
+                &format!("Player h: {:.3}, Terrain h: {:.3}, norm pos: {:.3},{:.3},{:.3}",
                     glm::length(&(player.feet() - planets[player.closest_planet_id].position)),
                     planets[player.closest_planet_id].get_height(&player.position),
                     glm::normalize(&(player.feet() - planets[player.closest_planet_id].position)).x,
@@ -463,7 +463,7 @@ pub fn game(
             conf.clip_near, // near
             conf.clip_far   // far
         );
-        
+
         //---------------------------------------------------------------------/
         // First person view
         //---------------------------------------------------------------------/
@@ -498,25 +498,25 @@ pub fn game(
                 gl::FALSE,
                 perspective_mat.as_ptr(),
             );
-            
-            
+
+
             //-----------------------------------------------------------------/
             // Clear background, set polygon mode
             //-----------------------------------------------------------------/
             gl::ClearColor(
-                conf.bg_color[0], conf.bg_color[1], 
+                conf.bg_color[0], conf.bg_color[1],
                 conf.bg_color[2], conf.bg_color[3]
             );
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
             gl::PolygonMode(gl::FRONT_AND_BACK, POLYMODES[conf.polymode]);
-            
+
 
             //-----------------------------------------------------------------/
             // Planet transforms and update uniforms
             // Compute closest planet
             //-----------------------------------------------------------------/
             scene_root.update_node_transformations(&glm::identity(), &player.position);
-            
+
             let mut planets_sorted = vec![];
             for (node, mut planet) in planet_nodes.iter().zip(&mut planets) {
                 planet.position = node.position;
@@ -579,7 +579,7 @@ pub fn game(
             //-----------------------------------------------------------------/
             // Draw elements in multiple passes using different clipping planes
             //-----------------------------------------------------------------/
-            // Draw objects very far away 
+            // Draw objects very far away
             gl::Clear(gl::DEPTH_BUFFER_BIT);
             let clipping = (125.0, 162500.0);
             let perspective_mat: glm::Mat4 = glm::perspective(
@@ -596,7 +596,7 @@ pub fn game(
             );
             let perspective_view = perspective_mat * cam;
             scene_root.draw_scene(&perspective_view, &sh, clipping);
-            // Draw objects pretty far away 
+            // Draw objects pretty far away
             gl::Clear(gl::DEPTH_BUFFER_BIT);
             let clipping = (2.5, 1250.0);
             let perspective_mat: glm::Mat4 = glm::perspective(
@@ -641,7 +641,7 @@ pub fn game(
             );
             let perspective_view = perspective_mat * cam;
             scene_root.draw_scene(&perspective_view, &sh, clipping);
-            
+
 
             //-----------------------------------------------------------------/
             // Draw GUI if enabled
@@ -701,7 +701,7 @@ fn mouse_input(
 
 /// Handle keyboard input
 fn keyboard_input(
-    keys: std::sync::MutexGuard<'_, std::vec::Vec<glutin::event::VirtualKeyCode>>, 
+    keys: std::sync::MutexGuard<'_, std::vec::Vec<glutin::event::VirtualKeyCode>>,
     key_debounce: &mut std::collections::HashMap<glutin::event::VirtualKeyCode, u32>,
     player: &mut player::Player,
     closest_planet: &planet::Planet,
@@ -722,14 +722,14 @@ fn keyboard_input(
             VirtualKeyCode::A => {
                 position -= match player.state {
                     FreeFloat => player.right * delta_time * movement_speed,
-                    Anchored(_) | 
+                    Anchored(_) |
                     Landed(_) => player.right * delta_time * movement_speed,
                 }
             },
             VirtualKeyCode::D => {
                 position += match player.state {
                     FreeFloat => player.right * delta_time * movement_speed,
-                    Anchored(_) | 
+                    Anchored(_) |
                     Landed(_) => player.right * delta_time * movement_speed,
                 }
             },
@@ -737,14 +737,14 @@ fn keyboard_input(
             VirtualKeyCode::W => {
                 position += match player.state {
                     FreeFloat => player.direction * delta_time * movement_speed,
-                    Anchored(_) | 
+                    Anchored(_) |
                     Landed(_) => _flat_direction * delta_time * movement_speed,
                 }
             },
             VirtualKeyCode::S => {
                 position -= match player.state {
                     FreeFloat => player.direction * delta_time * movement_speed,
-                    Anchored(_) | 
+                    Anchored(_) |
                     Landed(_) => _flat_direction * delta_time * movement_speed,
                 }
             },
