@@ -8,6 +8,8 @@ The project is written in [Rust](https://rust-lang.org) and requires Cargo. Run 
 
 Some configurations can be adjusted without recompiling in the `settings.conf` file. The scene is constructed in `scene.rs`, and planets parameters can be configured there.
 
+This version of Glutin does not work with Wayland, so the project will only run on X11.
+
 ### Controls
 
 * **`W A S D`**, **`shift`**, **`space`**: Movement
