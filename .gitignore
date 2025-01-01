@@ -1,3 +1,5 @@
 /target
 *.zip
 *.pdf
+Cargo.lock
+.vscode
