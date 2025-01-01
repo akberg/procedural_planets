@@ -38,7 +38,9 @@ fn main() {
         .with_resizable(true)
         .with_maximized(true)
         .with_inner_size(glutin::dpi::LogicalSize::new(SCREEN_W, SCREEN_H));
-    let cb = glutin::ContextBuilder::new().with_vsync(true);
+    let cb = glutin::ContextBuilder::new()
+        .with_gl(glutin::GlRequest::Specific(glutin::Api::OpenGl, (4, 6)))
+        .with_vsync(true);
     let windowed_context = cb.build_windowed(wb, &el).unwrap();
     // Uncomment these if you want to use the mouse for controls, but want it
     // to be confined to the screen and/or invisible.
